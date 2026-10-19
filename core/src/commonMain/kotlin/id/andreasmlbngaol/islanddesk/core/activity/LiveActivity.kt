@@ -24,14 +24,14 @@ class LiveActivityController(private val clock: () -> Long) {
         private set
 
     fun start(title: String, minutes: Int, kind: ActivityKind = ActivityKind.Focus): LiveActivity =
-        startSeconds(title, minutes.coerceIn(1, 720) * 60L, kind)
+        startSeconds(title, minutes.coerceIn(1, MAX_DURATION_SECONDS / 60) * 60L, kind)
 
     fun startSeconds(
         title: String,
         seconds: Long,
         kind: ActivityKind = ActivityKind.Focus,
     ): LiveActivity {
-        val duration = seconds.coerceIn(1L, 12L * 3_600L) * 1_000L
+        val duration = seconds.coerceIn(1L, MAX_DURATION_SECONDS.toLong()) * 1_000L
         val activity = LiveActivity(
             id = "activity-" + clock(),
             title = title.ifBlank { "Focus" },
@@ -63,6 +63,9 @@ class LiveActivityController(private val clock: () -> Long) {
     }
 
     companion object {
+        /** 99:59:59 — long enough for any focus session without overflow. */
+        const val MAX_DURATION_SECONDS: Int = 99 * 3_600 + 59 * 60 + 59
+
         fun format(ms: Long): String {
             val totalSeconds = (ms.coerceAtLeast(0L) + 999L) / 1_000L
             val hours = totalSeconds / 3_600L

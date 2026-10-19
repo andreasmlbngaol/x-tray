@@ -6,6 +6,13 @@ import java.util.Locale
 
 private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.ENGLISH)
 private val dateFormatter = DateTimeFormatter.ofPattern("EEE, d MMM", Locale.ENGLISH)
+private val clockTimeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.ENGLISH)
+
+actual fun formatClockTime(epochMillis: Long): String =
+    java.time.Instant.ofEpochMilli(epochMillis)
+        .atZone(java.time.ZoneId.systemDefault())
+        .toLocalTime()
+        .format(clockTimeFormatter)
 
 actual fun currentClockText(): ClockText {
     val now = LocalDateTime.now()

@@ -33,6 +33,11 @@ class ShellSystemControls : SystemControls {
         Shell.run("wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", Math.abs(deltaPercent).toString() + "%" + sign)
     }
 
+    override fun setVolume(percent: Int) {
+        if (!hasWpctl) return
+        Shell.run("wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", percent.coerceIn(0, 150).toString() + "%")
+    }
+
     override fun toggleMute() {
         if (hasWpctl) Shell.run("wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle")
     }
@@ -45,6 +50,11 @@ class ShellSystemControls : SystemControls {
         if (!hasBrightnessctl) return
         val sign = if (deltaPercent >= 0) "+" else "-"
         Shell.run("brightnessctl", "set", Math.abs(deltaPercent).toString() + "%" + sign)
+    }
+
+    override fun setBrightness(percent: Int) {
+        if (!hasBrightnessctl) return
+        Shell.run("brightnessctl", "set", percent.coerceIn(1, 100).toString() + "%")
     }
 
     override fun toggleWifi() {

@@ -16,6 +16,9 @@ import id.andreasmlbngaol.islanddesk.platform.clipboard.ClipboardWatcher
 import id.andreasmlbngaol.islanddesk.platform.files.FileOpener
 import id.andreasmlbngaol.islanddesk.platform.media.MediaSource
 import id.andreasmlbngaol.islanddesk.platform.media.MediaTrack
+import id.andreasmlbngaol.islanddesk.platform.network.NetworkSpeed
+import id.andreasmlbngaol.islanddesk.platform.network.NetworkSpeedSource
+import id.andreasmlbngaol.islanddesk.platform.system.PowerControls
 import id.andreasmlbngaol.islanddesk.platform.system.SystemControls
 import id.andreasmlbngaol.islanddesk.platform.system.SystemState
 
@@ -35,10 +38,13 @@ class IslandServices(
     val notifications: NotificationCenter,
     val autostart: AutostartManager,
     val fileOpener: FileOpener,
+    val network: NetworkSpeedSource,
+    val power: PowerControls,
 ) {
     var batteryState: BatteryState by mutableStateOf(BatteryState())
     var mediaTrack: MediaTrack? by mutableStateOf(null)
     var systemState: SystemState by mutableStateOf(SystemState())
+    var networkSpeed: NetworkSpeed by mutableStateOf(NetworkSpeed())
 
     /** Bumped whenever clipboard or shelf contents change. */
     var revision: Int by mutableIntStateOf(0)
@@ -56,5 +62,9 @@ class IslandServices(
 
     fun refreshSystem() {
         systemState = runCatching { controls.snapshot() }.getOrDefault(SystemState())
+    }
+
+    fun refreshNetwork() {
+        networkSpeed = runCatching { network.sample() }.getOrDefault(NetworkSpeed())
     }
 }

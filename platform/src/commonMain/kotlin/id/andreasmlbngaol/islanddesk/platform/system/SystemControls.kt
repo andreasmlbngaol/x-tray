@@ -20,9 +20,11 @@ interface SystemControls {
 
     fun snapshot(): SystemState
     fun volumeStep(deltaPercent: Int)
+    fun setVolume(percent: Int)
     fun toggleMute()
     fun toggleMic()
     fun brightnessStep(deltaPercent: Int)
+    fun setBrightness(percent: Int)
     fun toggleWifi()
     fun toggleBluetooth()
 }

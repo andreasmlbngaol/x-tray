@@ -42,7 +42,9 @@ import id.andreasmlbngaol.islanddesk.platform.internal.Log
 import id.andreasmlbngaol.islanddesk.platform.ipc.IpcServer
 import id.andreasmlbngaol.islanddesk.platform.ipc.sendIpc
 import id.andreasmlbngaol.islanddesk.platform.media.BusctlMediaSource
+import id.andreasmlbngaol.islanddesk.platform.network.SysfsNetworkSpeedSource
 import id.andreasmlbngaol.islanddesk.platform.settings.SettingsFile
+import id.andreasmlbngaol.islanddesk.platform.system.ShellPowerControls
 import id.andreasmlbngaol.islanddesk.platform.system.ShellSystemControls
 import id.andreasmlbngaol.islanddesk.platform.x11.X11Window
 import id.andreasmlbngaol.islanddesk.ui.island.IslandDesk
@@ -127,6 +129,7 @@ private fun ApplicationScope.IslandDeskApp() {
     var requestCounter by remember { mutableStateOf(0L) }
     var visible by remember { mutableStateOf(true) }
     var fullscreen by remember { mutableStateOf(false) }
+    var maximized by remember { mutableStateOf(false) }
 
     fun requestState(target: IslandState) {
         requestCounter += 1L
@@ -148,6 +151,13 @@ private fun ApplicationScope.IslandDeskApp() {
         }
     }
 
+    LaunchedEffect(Unit) {
+        while (true) {
+            services.refreshNetwork()
+            delay(1_000L)
+        }
+    }
+
     DisposableEffect(Unit) {
         services.clipboard.start { text ->
             SwingUtilities.invokeLater {
@@ -163,7 +173,8 @@ private fun ApplicationScope.IslandDeskApp() {
     LaunchedEffect(Unit) {
         while (true) {
             fullscreen = runCatching { X11Window.isActiveWindowFullscreen() }.getOrDefault(false)
-            delay(2_000L)
+            maximized = runCatching { X11Window.isActiveWindowMaximized() }.getOrDefault(false)
+            delay(1_000L)
         }
     }
 
@@ -196,6 +207,8 @@ private fun ApplicationScope.IslandDeskApp() {
         val tray = installTray(
             onToggle = { SwingUtilities.invokeLater { requestState(IslandState.Expanded) } },
             onCollapse = { SwingUtilities.invokeLater { requestState(IslandState.Collapsed) } },
+            onHide = { SwingUtilities.invokeLater { visible = false } },
+            onShow = { SwingUtilities.invokeLater { visible = true } },
             onQuit = { SwingUtilities.invokeLater { exitApplication() } },
             isDnd = { settings.current.doNotDisturb },
             setDnd = { value -> SwingUtilities.invokeLater { settings.update { it.copy(doNotDisturb = value) } } },
@@ -251,21 +264,35 @@ private fun ApplicationScope.IslandDeskApp() {
             )
         }
 
-        val monitorIndex = settings.current.monitorIndex
-        LaunchedEffect(monitorIndex) {
+        fun placeWindow() {
             val position = DisplayInfo.topCenterPosition(
                 width = window.width,
                 height = window.height,
                 topMargin = 0,
-                monitorIndex = monitorIndex,
+                monitorIndex = settings.current.monitorIndex,
             )
             window.setLocation(position.x, position.y)
         }
 
-        LaunchedEffect(visible, fullscreen) {
-            val shouldShow = visible && !fullscreen
-            if (window.isVisible != shouldShow) {
-                window.isVisible = shouldShow
+        val monitorIndex = settings.current.monitorIndex
+        LaunchedEffect(monitorIndex) {
+            placeWindow()
+        }
+
+        // Visibility is applied from a plain polling loop rather than a
+        // LaunchedEffect keyed on state: while the window is hidden Compose may
+        // stop requesting frames, so a keyed effect would never run again and
+        // `islanddesk show` could not bring the island back.
+        LaunchedEffect(Unit) {
+            while (true) {
+                val covered = fullscreen ||
+                    (settings.current.hideOverMaximized && maximized)
+                val shouldShow = visible && !covered
+                if (window.isVisible != shouldShow) {
+                    window.isVisible = shouldShow
+                    Log.i("window shown=" + shouldShow + " covered=" + covered)
+                }
+                delay(300L)
             }
         }
 
@@ -278,6 +305,7 @@ private fun ApplicationScope.IslandDeskApp() {
 
         IslandDeskTheme(
             darkTheme = darkTheme,
+            accent = settings.current.accentColor,
             reduceMotion = settings.current.reduceMotion,
         ) {
             IslandDesk(
@@ -325,6 +353,8 @@ private fun createServices(settings: SettingsStore): IslandServices = IslandServ
     notifications = NotificationCenter(),
     autostart = XdgAutostartManager(),
     fileOpener = DesktopFileOpener(),
+    network = SysfsNetworkSpeedSource(),
+    power = ShellPowerControls(),
 )
 
 private fun handleCommand(
@@ -393,6 +423,8 @@ private fun handleCommand(
 private fun installTray(
     onToggle: () -> Unit,
     onCollapse: () -> Unit,
+    onHide: () -> Unit,
+    onShow: () -> Unit,
     onQuit: () -> Unit,
     isDnd: () -> Boolean,
     setDnd: (Boolean) -> Unit,
@@ -405,6 +437,8 @@ private fun installTray(
         val popup = PopupMenu()
         popup.add(MenuItem("Open panel").apply { addActionListener { onToggle() } })
         popup.add(MenuItem("Collapse").apply { addActionListener { onCollapse() } })
+        popup.add(MenuItem("Hide island").apply { addActionListener { onHide() } })
+        popup.add(MenuItem("Show island").apply { addActionListener { onShow() } })
         popup.addSeparator()
         popup.add(
             java.awt.CheckboxMenuItem("Do not disturb", isDnd()).apply {
@@ -430,7 +464,7 @@ private fun trayImage(): BufferedImage {
     graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
     graphics.color = Color(0x08, 0x07, 0x0A)
     graphics.fillRoundRect(2, 8, 28, 16, 16, 16)
-    graphics.color = Color(0xCF, 0xBC, 0xFF)
+    graphics.color = Color(0xA9, 0xC7, 0xFF)
     graphics.fillOval(13, 14, 6, 6)
     graphics.dispose()
     return image

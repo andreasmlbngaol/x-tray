@@ -168,7 +168,19 @@ object X11Window {
     }
 
     /** True when the currently focused window is fullscreen. */
-    fun isActiveWindowFullscreen(): Boolean {
+    fun isActiveWindowFullscreen(): Boolean =
+        activeWindowStateFlags("_NET_WM_STATE_FULLSCREEN")
+
+    /**
+     * True when the focused window is maximized in both directions. A maximized
+     * window puts its tab strip right under the panel, which is exactly where
+     * the island sits.
+     */
+    fun isActiveWindowMaximized(): Boolean =
+        activeWindowStateFlags("_NET_WM_STATE_MAXIMIZED_VERT") &&
+            activeWindowStateFlags("_NET_WM_STATE_MAXIMIZED_HORZ")
+
+    private fun activeWindowStateFlags(flag: String): Boolean {
         val display = x11 ?: return false
         synchronized(lock) {
             val d = display.XOpenDisplay(null) ?: return false
@@ -179,13 +191,20 @@ object X11Window {
                 val active = readLongs(display, d, root, activeAtom)?.firstOrNull() ?: return false
                 if (active == 0L) return false
 
+                // Ignore ourselves: clicking the island must never hide it.
+                val pidAtom = display.XInternAtom(d, "_NET_WM_PID", 1)
+                if (pidAtom != 0L) {
+                    val pid = readLongs(display, d, active, pidAtom)?.firstOrNull()
+                    if (pid == ProcessHandle.current().pid()) return false
+                }
+
                 val stateAtom = display.XInternAtom(d, "_NET_WM_STATE", 1)
                 if (stateAtom == 0L) return false
                 val states = readLongs(display, d, active, stateAtom) ?: return false
-                val fullscreen = display.XInternAtom(d, "_NET_WM_STATE_FULLSCREEN", 1)
-                return states.contains(fullscreen)
+                val target = display.XInternAtom(d, flag, 1)
+                return states.contains(target)
             } catch (error: Throwable) {
-                Log.d("fullscreen query failed: " + error.message)
+                Log.d("window state query failed: " + error.message)
                 return false
             } finally {
                 display.XCloseDisplay(d)

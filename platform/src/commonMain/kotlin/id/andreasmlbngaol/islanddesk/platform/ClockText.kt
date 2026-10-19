@@ -9,3 +9,6 @@ data class ClockText(
 )
 
 expect fun currentClockText(): ClockText
+
+/** Wall-clock label (HH:mm) for an absolute instant, used for focus end times. */
+expect fun formatClockTime(epochMillis: Long): String
