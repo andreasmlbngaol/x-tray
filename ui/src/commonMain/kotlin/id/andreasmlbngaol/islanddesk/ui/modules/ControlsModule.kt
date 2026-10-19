@@ -2,13 +2,14 @@ package id.andreasmlbngaol.islanddesk.ui.modules
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeOff
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
@@ -21,15 +22,19 @@ import androidx.compose.material.icons.rounded.MicOff
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material.icons.rounded.WifiOff
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalIconToggleButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.ToggleButton
-import androidx.compose.material3.ToggleButtonDefaults
-import androidx.compose.material3.ToggleButtonSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -42,9 +47,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 /**
- * Quick settings built out of [ToggleButton] tiles. The container morphs on
- * press and the checked container flips to the primary container, which is the
- * expressive quick-settings pattern rather than a grid of static cards.
+ * Quick settings: volume and brightness are continuous sliders, while the
+ * remaining toggles rely on the filled tonal state instead of repeating
+ * "On"/"Off" labels.
  */
 class ControlsModule(private val services: IslandServices) : IslandModule {
     override val id = "controls"
@@ -88,7 +93,6 @@ class ControlsModule(private val services: IslandServices) : IslandModule {
         }
     }
 
-    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     @Composable
     override fun ExpandedContent() {
         LaunchedEffect(Unit) {
@@ -98,99 +102,89 @@ class ControlsModule(private val services: IslandServices) : IslandModule {
             }
         }
         val state = services.systemState
-        val dnd = services.settings.current.doNotDisturb
+
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                ControlTile(
-                    label = "Volume",
-                    value = state.volumePercent?.toString()?.plus("%") ?: "—",
-                    icon = if (state.muted == true) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp,
-                    active = state.muted != true,
-                    modifier = Modifier.weight(1f),
-                    onClick = {
-                        services.controls.volumeStep(5)
-                        refreshAsync()
-                    },
-                )
-                ControlTile(
-                    label = "Mute",
-                    value = if (state.muted == true) "On" else "Off",
-                    icon = Icons.AutoMirrored.Rounded.VolumeOff,
-                    active = state.muted == true,
-                    modifier = Modifier.weight(1f),
-                    onClick = {
-                        services.controls.toggleMute()
+            LevelCard(
+                title = "Volume",
+                value = state.volumePercent ?: 0,
+                icon = if (state.muted == true) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp,
+                muted = state.muted == true,
+                onMuteToggle = {
+                    services.controls.toggleMute()
+                    refreshAsync()
+                },
+                onCommit = { percent ->
+                    if (state.muted == true) services.controls.toggleMute()
+                    services.controls.setVolume(percent)
+                    refreshAsync()
+                },
+            )
+
+            if (services.controls.hasBrightness) {
+                LevelCard(
+                    title = "Brightness",
+                    value = state.brightnessPercent ?: 0,
+                    icon = Icons.Rounded.Brightness6,
+                    muted = false,
+                    onMuteToggle = null,
+                    onCommit = { percent ->
+                        services.controls.setBrightness(percent)
                         refreshAsync()
                     },
                 )
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (services.controls.hasBrightness) {
-                    ControlTile(
-                        label = "Brightness",
-                        value = state.brightnessPercent?.toString()?.plus("%") ?: "—",
-                        icon = Icons.Rounded.Brightness6,
-                        active = (state.brightnessPercent ?: 0) > 0,
-                        modifier = Modifier.weight(1f),
-                        onClick = {
-                            services.controls.brightnessStep(10)
-                            refreshAsync()
-                        },
-                    )
-                }
-                ControlTile(
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                ToggleTile(
                     label = "Microphone",
-                    value = if (state.micMuted == true) "Off" else "On",
                     icon = if (state.micMuted == true) Icons.Rounded.MicOff else Icons.Rounded.Mic,
-                    active = state.micMuted != true,
+                    checked = state.micMuted != true,
                     modifier = Modifier.weight(1f),
-                    onClick = {
+                    onCheckedChange = {
                         services.controls.toggleMic()
                         refreshAsync()
                     },
                 )
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (services.controls.hasWifi) {
-                    ControlTile(
+                    ToggleTile(
                         label = "Wi-Fi",
-                        value = if (state.wifiEnabled == true) "On" else "Off",
                         icon = if (state.wifiEnabled == true) Icons.Rounded.Wifi else Icons.Rounded.WifiOff,
-                        active = state.wifiEnabled == true,
+                        checked = state.wifiEnabled == true,
                         modifier = Modifier.weight(1f),
-                        onClick = {
+                        onCheckedChange = {
                             services.controls.toggleWifi()
                             refreshAsync()
                         },
                     )
                 }
                 if (services.controls.hasBluetooth) {
-                    ControlTile(
+                    ToggleTile(
                         label = "Bluetooth",
-                        value = if (state.bluetoothEnabled == true) "On" else "Off",
                         icon = if (state.bluetoothEnabled == true) Icons.Rounded.Bluetooth else Icons.Rounded.BluetoothDisabled,
-                        active = state.bluetoothEnabled == true,
+                        checked = state.bluetoothEnabled == true,
                         modifier = Modifier.weight(1f),
-                        onClick = {
+                        onCheckedChange = {
                             services.controls.toggleBluetooth()
                             refreshAsync()
                         },
                     )
                 }
+                ToggleTile(
+                    label = "Do not disturb",
+                    icon = Icons.Rounded.DoNotDisturbOn,
+                    checked = services.settings.current.doNotDisturb,
+                    modifier = Modifier.weight(1f),
+                    onCheckedChange = {
+                        services.settings.update { it.copy(doNotDisturb = !it.doNotDisturb) }
+                    },
+                )
             }
-            ControlTile(
-                label = "Do not disturb",
-                value = if (dnd) "On" else "Off",
-                icon = Icons.Rounded.DoNotDisturbOn,
-                active = dnd,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = {
-                    services.settings.update { it.copy(doNotDisturb = !it.doNotDisturb) }
-                },
-            )
         }
     }
 
@@ -205,54 +199,109 @@ class ControlsModule(private val services: IslandServices) : IslandModule {
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun ControlTile(
-    label: String,
-    value: String,
+private fun LevelCard(
+    title: String,
+    value: Int,
     icon: ImageVector,
-    active: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
+    muted: Boolean,
+    onMuteToggle: (() -> Unit)?,
+    onCommit: (Int) -> Unit,
 ) {
-    ToggleButton(
-        checked = active,
-        onCheckedChange = { onClick() },
-        modifier = modifier.height(84.dp),
-        buttonSize = ToggleButtonSize.Medium,
-        shapes = ToggleButtonDefaults.shapesFor(ToggleButtonSize.Medium),
-        colors = ToggleButtonDefaults.colors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            checkedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-            checkedContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-        ),
-        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
+    var draft by remember { mutableFloatStateOf(value.toFloat()) }
+    var dragging by remember { mutableStateOf(false) }
+    LaunchedEffect(value) {
+        if (!dragging) draft = value.toFloat()
+    }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight(),
-            verticalArrangement = Arrangement.SpaceBetween,
+        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = draft.toInt().toString() + "%",
+                    style = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = "tnum"),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (onMuteToggle != null) {
+                    FilledTonalIconToggleButton(
+                        checked = muted,
+                        onCheckedChange = { onMuteToggle() },
+                        modifier = Modifier.size(34.dp),
+                        shape = RoundedCornerShape(12.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.VolumeOff,
+                            contentDescription = if (muted) "Unmute" else "Mute",
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+                }
+            }
+            Slider(
+                value = draft,
+                onValueChange = { next ->
+                    dragging = true
+                    draft = next
+                },
+                onValueChangeFinished = {
+                    dragging = false
+                    onCommit(draft.toInt())
+                },
+                valueRange = 0f..100f,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ToggleTile(
+    label: String,
+    icon: ImageVector,
+    checked: Boolean,
+    modifier: Modifier = Modifier,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        FilledTonalIconToggleButton(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            modifier = Modifier.size(52.dp),
+            shape = RoundedCornerShape(18.dp),
         ) {
             Icon(
                 imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
+                contentDescription = label,
+                modifier = Modifier.size(22.dp),
             )
-            Column {
-                Text(
-                    text = value,
-                    style = MaterialTheme.typography.titleLargeEmphasized,
-                    maxLines = 1,
-                )
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
         }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
