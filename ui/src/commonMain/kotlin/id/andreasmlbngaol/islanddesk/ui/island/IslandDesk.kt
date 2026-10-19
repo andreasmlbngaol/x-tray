@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.DragData
@@ -228,6 +229,7 @@ fun IslandDesk(
     val shape = remember(bottomRadius, filletRadius) {
         IslandShape(bottomRadius = bottomRadius, filletRadius = filletRadius)
     }
+    val isDarkSurface = MaterialTheme.colorScheme.surface.luminance() < 0.5f
 
     val density = LocalDensity.current
     LaunchedEffect(state) {
@@ -256,7 +258,10 @@ fun IslandDesk(
                     .width(width)
                     .height(height)
                     .shadow(
-                        elevation = if (state == IslandState.Collapsed) 6.dp else 16.dp,
+                        elevation = when {
+                            state == IslandState.Collapsed -> if (isDarkSurface) 6.dp else 10.dp
+                            else -> if (isDarkSurface) 16.dp else 22.dp
+                        },
                         shape = shape,
                         clip = false,
                     )
@@ -274,7 +279,9 @@ fun IslandDesk(
                         color = if (isDragOver) {
                             MaterialTheme.colorScheme.primary
                         } else {
-                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                            MaterialTheme.colorScheme.outlineVariant.copy(
+                                alpha = if (isDarkSurface) 0.35f else 0.65f,
+                            )
                         },
                         shape = shape,
                     )

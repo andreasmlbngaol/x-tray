@@ -36,9 +36,9 @@ fun CollapsedContent(
     Row(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
             text = clock.time,
@@ -52,7 +52,7 @@ fun CollapsedContent(
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.width(74.dp),
+            modifier = Modifier.width(64.dp),
         )
         Box(
             modifier = Modifier
