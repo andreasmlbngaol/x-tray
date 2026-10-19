@@ -23,6 +23,17 @@ compose.desktop {
             targetFormats(TargetFormat.Deb)
             packageName = "islanddesk"
             packageVersion = "0.1.0"
+            description = "Dynamic Island untuk desktop Linux"
+            vendor = "IslandDesk"
+            copyright = "(c) 2026 IslandDesk"
+
+            linux {
+                iconFile.set(project.file("icons/islanddesk.png"))
+                debMaintainer = "islanddesk@localhost"
+                appCategory = "Utility"
+                menuGroup = "Utility"
+                shortcut = true
+            }
         }
     }
 }

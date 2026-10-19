@@ -1,9 +1,9 @@
 package id.andreasmlbngaol.islanddesk.app
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -12,32 +12,100 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.DpSize
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ApplicationScope
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import id.andreasmlbngaol.islanddesk.core.IslandState
+import id.andreasmlbngaol.islanddesk.core.IslandStateRequest
+import id.andreasmlbngaol.islanddesk.core.activity.LiveActivityController
+import id.andreasmlbngaol.islanddesk.core.clipboard.ClipboardHistory
+import id.andreasmlbngaol.islanddesk.core.ipc.IPC_USAGE
+import id.andreasmlbngaol.islanddesk.core.ipc.IpcCommand
+import id.andreasmlbngaol.islanddesk.core.ipc.parseIpcCommand
+import id.andreasmlbngaol.islanddesk.core.notification.NotificationCenter
+import id.andreasmlbngaol.islanddesk.core.settings.SettingsStore
+import id.andreasmlbngaol.islanddesk.core.shelf.ShelfStore
 import id.andreasmlbngaol.islanddesk.platform.DisplayInfo
 import id.andreasmlbngaol.islanddesk.platform.SessionInfo
-import id.andreasmlbngaol.islanddesk.platform.currentSessionInfo
-import id.andreasmlbngaol.islanddesk.ui.demo.DemoModules
+import id.andreasmlbngaol.islanddesk.platform.autostart.XdgAutostartManager
+import id.andreasmlbngaol.islanddesk.platform.battery.SysfsBatterySource
+import id.andreasmlbngaol.islanddesk.platform.clipboard.AwtClipboardWatcher
+import id.andreasmlbngaol.islanddesk.platform.files.DesktopFileOpener
+import id.andreasmlbngaol.islanddesk.platform.instance.SingleInstance
+import id.andreasmlbngaol.islanddesk.platform.internal.AppPaths
+import id.andreasmlbngaol.islanddesk.platform.internal.Log
+import id.andreasmlbngaol.islanddesk.platform.ipc.IpcServer
+import id.andreasmlbngaol.islanddesk.platform.ipc.sendIpc
+import id.andreasmlbngaol.islanddesk.platform.media.BusctlMediaSource
+import id.andreasmlbngaol.islanddesk.platform.settings.SettingsFile
+import id.andreasmlbngaol.islanddesk.platform.system.ShellSystemControls
+import id.andreasmlbngaol.islanddesk.platform.x11.X11Window
 import id.andreasmlbngaol.islanddesk.ui.island.IslandDesk
 import id.andreasmlbngaol.islanddesk.ui.island.IslandDimens
+import id.andreasmlbngaol.islanddesk.ui.services.IslandServices
 import id.andreasmlbngaol.islanddesk.ui.theme.IslandDeskTheme
+import kotlinx.coroutines.delay
+import java.awt.Color
+import java.awt.Dimension
+import java.awt.Graphics2D
+import java.awt.MenuItem
+import java.awt.PopupMenu
+import java.awt.RenderingHints
+import java.awt.SystemTray
+import java.awt.TrayIcon
+import java.awt.datatransfer.DataFlavor
+import java.awt.dnd.DnDConstants
+import java.awt.dnd.DropTarget
+import java.awt.dnd.DropTargetAdapter
+import java.awt.dnd.DropTargetDropEvent
+import java.awt.image.BufferedImage
+import java.io.File
 import javax.swing.SwingUtilities
+import kotlin.system.exitProcess
 
-fun main() {
-    val session = currentSessionInfo()
-    println(
-        "IslandDesk: session=${session.sessionType} desktop=${session.desktop} " +
-            "displayServer=${session.displayServer} wayland=${session.isWayland}"
-    )
+fun main(args: Array<String>) {
+    val session = currentSession()
     configureRendering(session)
-    application { IslandDeskApp() }
+
+    if (args.isNotEmpty()) {
+        val command = parseIpcCommand(args.toList())
+        if (command == null) {
+            System.err.println(IPC_USAGE)
+            exitProcess(2)
+        }
+        val reply = sendIpc(AppPaths.socket, command)
+        if (reply == null) {
+            System.err.println("IslandDesk: tidak ada instance yang berjalan")
+            exitProcess(1)
+        }
+        println(reply)
+        return
+    }
+
+    val instance = SingleInstance(AppPaths.lock)
+    if (!instance.tryAcquire()) {
+        val reply = sendIpc(AppPaths.socket, IpcCommand.Show)
+        Log.i("instance already running, forwarded show: " + reply)
+        return
+    }
+
+    try {
+        application { IslandDeskApp() }
+    } finally {
+        instance.release()
+    }
+}
+
+private fun currentSession(): SessionInfo {
+    val session = id.andreasmlbngaol.islanddesk.platform.currentSessionInfo()
+    Log.i(
+        "session=" + session.sessionType + " desktop=" + session.desktop +
+            " displayServer=" + session.displayServer + " wayland=" + session.isWayland
+    )
+    return session
 }
 
 /**
@@ -50,14 +118,94 @@ private fun configureRendering(session: SessionInfo) {
     val requested = System.getenv("ISLANDDESK_RENDER_API")?.uppercase()
     val api = requested ?: if (session.isWayland) "SOFTWARE" else "OPENGL"
     System.setProperty("skiko.renderApi", api)
-    println("IslandDesk: renderApi=$api requested=$requested")
+    Log.i("renderApi=" + api + " requested=" + requested)
 }
 
 @Composable
 private fun ApplicationScope.IslandDeskApp() {
-    var collapseSignal by remember { mutableIntStateOf(0) }
-    var activateSignal by remember { mutableIntStateOf(0) }
+    val settings = remember { SettingsStore(SettingsFile()) }
+    val services = remember { createServices(settings) }
+
     var islandState by remember { mutableStateOf(IslandState.Collapsed) }
+    var stateRequest by remember { mutableStateOf<IslandStateRequest?>(null) }
+    var requestCounter by remember { mutableStateOf(0L) }
+    var visible by remember { mutableStateOf(true) }
+    var fullscreen by remember { mutableStateOf(false) }
+
+    fun requestState(target: IslandState) {
+        requestCounter += 1L
+        stateRequest = IslandStateRequest(requestCounter, target)
+    }
+
+    LaunchedEffect(Unit) {
+        services.refreshBattery()
+        services.refreshSystem()
+        if (settings.current.startAtLogin && !services.autostart.isEnabled()) {
+            services.autostart.setEnabled(true)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            services.refreshBattery()
+            delay(30_000L)
+        }
+    }
+
+    DisposableEffect(Unit) {
+        services.clipboard.start { text ->
+            SwingUtilities.invokeLater {
+                if (!services.clipboardPaused) {
+                    services.clipboardHistory.add(text, System.currentTimeMillis())
+                    services.bump()
+                }
+            }
+        }
+        onDispose { services.clipboard.stop() }
+    }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            fullscreen = runCatching { X11Window.isActiveWindowFullscreen() }.getOrDefault(false)
+            delay(2_000L)
+        }
+    }
+
+    val notification = services.notifications.current
+    LaunchedEffect(notification?.id) {
+        if (notification != null) {
+            delay(6_000L)
+            if (services.notifications.current?.id == notification.id) {
+                services.notifications.dismiss()
+            }
+        }
+    }
+
+    DisposableEffect(Unit) {
+        val server = IpcServer(AppPaths.socket) { command ->
+            handleCommand(
+                command = command,
+                services = services,
+                currentState = { islandState },
+                requestState = { target -> SwingUtilities.invokeLater { requestState(target) } },
+                setVisible = { value -> SwingUtilities.invokeLater { visible = value } },
+                quit = { SwingUtilities.invokeLater { exitApplication() } },
+            )
+        }
+        server.start()
+        onDispose { server.stop() }
+    }
+
+    DisposableEffect(Unit) {
+        val tray = installTray(
+            onToggle = { SwingUtilities.invokeLater { requestState(IslandState.Expanded) } },
+            onCollapse = { SwingUtilities.invokeLater { requestState(IslandState.Collapsed) } },
+            onQuit = { SwingUtilities.invokeLater { exitApplication() } },
+            isDnd = { settings.current.doNotDisturb },
+            setDnd = { value -> SwingUtilities.invokeLater { settings.update { it.copy(doNotDisturb = value) } } },
+        )
+        onDispose { tray?.let { runCatching { SystemTray.getSystemTray().remove(it) } } }
+    }
 
     val collapsedWindow = IslandDimens.forState(IslandState.Collapsed)
     val windowState = rememberWindowState(
@@ -79,7 +227,7 @@ private fun ApplicationScope.IslandDeskApp() {
         alwaysOnTop = true,
         onPreviewKeyEvent = { event ->
             if (event.type == KeyEventType.KeyDown && event.key == Key.Escape) {
-                collapseSignal++
+                requestState(IslandState.Collapsed)
                 true
             } else {
                 false
@@ -88,34 +236,229 @@ private fun ApplicationScope.IslandDeskApp() {
     ) {
         LaunchedEffect(Unit) {
             window.isAutoRequestFocus = false
-            startDemoDriver(System.getenv("ISLANDDESK_DEMO"), { activateSignal++ }, { collapseSignal++ })
+            repeat(6) {
+                delay(250L)
+                X11Window.applyEwmhHints()
+            }
+            startDemoDriver(
+                demo = System.getenv("ISLANDDESK_DEMO"),
+                expand = { SwingUtilities.invokeLater { requestState(IslandState.Expanded) } },
+                collapse = { SwingUtilities.invokeLater { requestState(IslandState.Collapsed) } },
+            )
         }
 
-        val density = LocalDensity.current
-        LaunchedEffect(islandState) {
-            val size = IslandDimens.forState(islandState)
-            val widthPx = with(density) { IslandDimens.windowWidth(size).roundToPx() }
-            val heightPx = with(density) { IslandDimens.windowHeight(size).roundToPx() }
-
-            window.setSize(widthPx, heightPx)
-            val position = DisplayInfo.topCenterPosition(widthPx, heightPx, topMargin = 0)
-            window.setLocation(position.x, position.y)
-
-            println(
-                "IslandDesk: state=$islandState window=${window.bounds} " +
-                    "screen=${DisplayInfo.primaryBounds()} usable=${DisplayInfo.usableBounds()}"
+        val monitorIndex = settings.current.monitorIndex
+        LaunchedEffect(monitorIndex) {
+            val position = DisplayInfo.topCenterPosition(
+                width = window.width,
+                height = window.height,
+                topMargin = 0,
+                monitorIndex = monitorIndex,
             )
+            window.setLocation(position.x, position.y)
+        }
+
+        LaunchedEffect(visible, fullscreen) {
+            val shouldShow = visible && !fullscreen
+            if (window.isVisible != shouldShow) {
+                window.isVisible = shouldShow
+            }
+        }
+
+        LaunchedEffect(Unit) {
+            installDropTarget(window) { paths ->
+                SwingUtilities.invokeLater {
+                    services.shelf.add(paths, System.currentTimeMillis())
+                    services.bump()
+                    requestState(IslandState.Expanded)
+                }
+            }
         }
 
         IslandDeskTheme(darkTheme = true) {
             IslandDesk(
-                registry = DemoModules,
-                collapseSignal = collapseSignal,
-                activateSignal = activateSignal,
-                onStateChange = { islandState = it },
+                services = services,
+                stateRequest = stateRequest,
+                onStateChange = {
+                    islandState = it
+                    Log.i("state=" + it)
+                },
+                onGeometryChanged = { geometry ->
+                    window.setSize(geometry.windowWidthPx, geometry.windowHeightPx)
+                    val position = DisplayInfo.topCenterPosition(
+                        width = geometry.windowWidthPx,
+                        height = geometry.windowHeightPx,
+                        topMargin = 0,
+                        monitorIndex = settings.current.monitorIndex,
+                    )
+                    window.setLocation(position.x, position.y)
+                    Log.d(
+                        "geometry window=" + geometry.windowWidthPx + "x" + geometry.windowHeightPx +
+                            " island=" + geometry.islandWidthPx + "x" + geometry.islandHeightPx +
+                            " at " + position.x + "," + position.y
+                    )
+                    SwingUtilities.invokeLater {
+                        if (!X11Window.applyInputRegion(geometry)) {
+                            Log.d("input region not applied")
+                        }
+                    }
+                },
             )
         }
     }
+}
+
+private fun createServices(settings: SettingsStore): IslandServices = IslandServices(
+    settings = settings,
+    media = BusctlMediaSource(),
+    clipboard = AwtClipboardWatcher(),
+    clipboardHistory = ClipboardHistory(maxItems = 50),
+    shelf = ShelfStore(),
+    battery = SysfsBatterySource(),
+    controls = ShellSystemControls(),
+    activity = LiveActivityController { System.currentTimeMillis() },
+    notifications = NotificationCenter(),
+    autostart = XdgAutostartManager(),
+    fileOpener = DesktopFileOpener(),
+)
+
+private fun handleCommand(
+    command: IpcCommand,
+    services: IslandServices,
+    currentState: () -> IslandState,
+    requestState: (IslandState) -> Unit,
+    setVisible: (Boolean) -> Unit,
+    quit: () -> Unit,
+): String = when (command) {
+    IpcCommand.Toggle -> {
+        requestState(if (currentState() == IslandState.Expanded) IslandState.Collapsed else IslandState.Expanded)
+        "ok"
+    }
+    IpcCommand.Expand -> {
+        requestState(IslandState.Expanded)
+        "ok"
+    }
+    IpcCommand.Collapse -> {
+        requestState(IslandState.Collapsed)
+        "ok"
+    }
+    IpcCommand.Show -> {
+        setVisible(true)
+        "ok"
+    }
+    IpcCommand.Hide -> {
+        setVisible(false)
+        "ok"
+    }
+    IpcCommand.Quit -> {
+        quit()
+        "ok"
+    }
+    IpcCommand.State -> currentState().name
+    is IpcCommand.Notify -> {
+        if (services.settings.current.doNotDisturb) {
+            "suppressed"
+        } else {
+            SwingUtilities.invokeLater {
+                services.notifications.push(command.message)
+                setVisible(true)
+            }
+            "ok"
+        }
+    }
+    is IpcCommand.StartActivity -> {
+        SwingUtilities.invokeLater {
+            services.activity.start(command.title, command.minutes)
+            requestState(IslandState.Expanded)
+        }
+        "ok"
+    }
+    IpcCommand.StopActivity -> {
+        SwingUtilities.invokeLater { services.activity.stop() }
+        "ok"
+    }
+    is IpcCommand.SetDnd -> {
+        SwingUtilities.invokeLater {
+            services.settings.update { it.copy(doNotDisturb = command.enabled) }
+        }
+        "ok"
+    }
+}
+
+private fun installDropTarget(window: java.awt.Window, onFiles: (List<String>) -> Unit): DropTarget {
+    val target = DropTarget(
+        window,
+        DnDConstants.ACTION_COPY,
+        object : DropTargetAdapter() {
+            override fun drop(event: DropTargetDropEvent) {
+                event.acceptDrop(DnDConstants.ACTION_COPY)
+                val paths = runCatching {
+                    val transferable = event.transferable
+                    if (transferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
+                        @Suppress("UNCHECKED_CAST")
+                        val files = transferable.getTransferData(DataFlavor.javaFileListFlavor) as List<File>
+                        files.map { it.absolutePath }
+                    } else {
+                        emptyList()
+                    }
+                }.getOrDefault(emptyList())
+                if (paths.isNotEmpty()) {
+                    onFiles(paths)
+                    event.dropComplete(true)
+                } else {
+                    event.dropComplete(false)
+                }
+            }
+        },
+    )
+    target.isActive = true
+    return target
+}
+
+private fun installTray(
+    onToggle: () -> Unit,
+    onCollapse: () -> Unit,
+    onQuit: () -> Unit,
+    isDnd: () -> Boolean,
+    setDnd: (Boolean) -> Unit,
+): TrayIcon? {
+    if (!SystemTray.isSupported()) {
+        Log.w("system tray not supported")
+        return null
+    }
+    return runCatching {
+        val popup = PopupMenu()
+        popup.add(MenuItem("Buka panel").apply { addActionListener { onToggle() } })
+        popup.add(MenuItem("Ciutkan").apply { addActionListener { onCollapse() } })
+        popup.addSeparator()
+        popup.add(
+            java.awt.CheckboxMenuItem("Jangan ganggu", isDnd()).apply {
+                addItemListener { event ->
+                    setDnd((event.source as java.awt.CheckboxMenuItem).state)
+                }
+            }
+        )
+        popup.addSeparator()
+        popup.add(MenuItem("Keluar").apply { addActionListener { onQuit() } })
+
+        val icon = TrayIcon(trayImage(), "IslandDesk", popup)
+        icon.isImageAutoSize = true
+        SystemTray.getSystemTray().add(icon)
+        icon
+    }.onFailure { Log.w("cannot install tray icon", it) }.getOrNull()
+}
+
+private fun trayImage(): BufferedImage {
+    val size = 32
+    val image = BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB)
+    val graphics = image.createGraphics()
+    graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+    graphics.color = Color(0x08, 0x07, 0x0A)
+    graphics.fillRoundRect(2, 8, 28, 16, 16, 16)
+    graphics.color = Color(0xCF, 0xBC, 0xFF)
+    graphics.fillOval(13, 14, 6, 6)
+    graphics.dispose()
+    return image
 }
 
 /**
@@ -123,18 +466,19 @@ private fun ApplicationScope.IslandDeskApp() {
  * not reach the window (XWayland). Set ISLANDDESK_DEMO=cycle to alternate
  * between expanded and collapsed.
  */
-private fun startDemoDriver(demo: String?, activate: () -> Unit, collapse: () -> Unit) {
-    println("IslandDesk: demo=$demo")
+private fun startDemoDriver(
+    demo: String?,
+    expand: () -> Unit,
+    collapse: () -> Unit,
+) {
+    Log.i("demo=" + demo)
     if (demo != "cycle") return
-    println("IslandDesk: demo cycle started")
     Thread {
         while (true) {
-            Thread.sleep(1_500)
-            println("IslandDesk: demo activate")
-            SwingUtilities.invokeLater(activate)
-            Thread.sleep(2_500)
-            println("IslandDesk: demo collapse")
-            SwingUtilities.invokeLater(collapse)
+            Thread.sleep(1_500L)
+            expand()
+            Thread.sleep(3_000L)
+            collapse()
         }
-    }.start()
+    }.apply { isDaemon = true }.start()
 }
