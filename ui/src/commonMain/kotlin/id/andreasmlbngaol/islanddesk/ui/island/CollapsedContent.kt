@@ -38,28 +38,33 @@ fun CollapsedContent(
             .fillMaxSize()
             .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(
-            text = clock.time,
-            style = MaterialTheme.typography.titleMediumEmphasized.copy(fontFeatureSettings = "tnum"),
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Text(
-            text = clock.date,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.width(64.dp),
-        )
-        Box(
-            modifier = Modifier
-                .width(1.dp)
-                .height(14.dp)
-                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = clock.time,
+                style = MaterialTheme.typography.titleMediumEmphasized.copy(fontFeatureSettings = "tnum"),
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = clock.date,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.width(64.dp),
+            )
+            Box(
+                modifier = Modifier
+                    .width(1.dp)
+                    .height(14.dp)
+                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
+            )
+        }
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(5.dp),
