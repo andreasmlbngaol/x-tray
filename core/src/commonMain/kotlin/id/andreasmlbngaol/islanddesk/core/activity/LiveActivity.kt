@@ -1,5 +1,9 @@
 package id.andreasmlbngaol.islanddesk.core.activity
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+
 enum class ActivityKind { Focus, Break, Generic }
 
 data class LiveActivity(
@@ -16,15 +20,22 @@ data class LiveActivity(
  * countdown behaviour can be tested without sleeping.
  */
 class LiveActivityController(private val clock: () -> Long) {
-    var current: LiveActivity? = null
+    var current: LiveActivity? by mutableStateOf(null)
         private set
 
-    fun start(title: String, minutes: Int, kind: ActivityKind = ActivityKind.Focus): LiveActivity {
-        val duration = minutes.coerceIn(1, 180) * 60_000L
+    fun start(title: String, minutes: Int, kind: ActivityKind = ActivityKind.Focus): LiveActivity =
+        startSeconds(title, minutes.coerceIn(1, 720) * 60L, kind)
+
+    fun startSeconds(
+        title: String,
+        seconds: Long,
+        kind: ActivityKind = ActivityKind.Focus,
+    ): LiveActivity {
+        val duration = seconds.coerceIn(1L, 12L * 3_600L) * 1_000L
         val activity = LiveActivity(
             id = "activity-" + clock(),
-            title = title.ifBlank { "Fokus" },
-            subtitle = if (kind == ActivityKind.Break) "Istirahat" else "Sesi fokus",
+            title = title.ifBlank { "Focus" },
+            subtitle = if (kind == ActivityKind.Break) "Break" else "Focus session",
             kind = kind,
             startedAtMs = clock(),
             durationMs = duration,
@@ -54,9 +65,12 @@ class LiveActivityController(private val clock: () -> Long) {
     companion object {
         fun format(ms: Long): String {
             val totalSeconds = (ms.coerceAtLeast(0L) + 999L) / 1_000L
-            val minutes = totalSeconds / 60
-            val seconds = totalSeconds % 60
-            return minutes.toString().padStart(2, '0') + ":" + seconds.toString().padStart(2, '0')
+            val hours = totalSeconds / 3_600L
+            val minutes = (totalSeconds % 3_600L) / 60L
+            val seconds = totalSeconds % 60L
+            val mm = minutes.toString().padStart(2, '0')
+            val ss = seconds.toString().padStart(2, '0')
+            return if (hours > 0L) hours.toString().padStart(2, '0') + ":" + mm + ":" + ss else mm + ":" + ss
         }
     }
 }

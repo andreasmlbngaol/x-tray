@@ -16,23 +16,23 @@ class IslandStateMachineTest {
     }
 
     @Test
-    fun sustainedHoverMovesPeekToExpanded() {
+    fun sustainedHoverStaysInPeek() {
         val machine = IslandStateMachine()
         machine.onPointerEnter(0)
         machine.onTick(180)
         assertEquals(IslandState.Peek, machine.state)
-        assertEquals(IslandState.Peek, machine.onTick(779))
-        assertEquals(IslandState.Expanded, machine.onTick(780))
+        assertEquals(IslandState.Peek, machine.onTick(60_000))
+        assertEquals(IslandState.Peek, machine.onTick(600_000))
     }
 
     @Test
-    fun exitCollapsesAfterDelay() {
+    fun exitFromPeekCollapsesAfterDelay() {
         val machine = IslandStateMachine()
         machine.onPointerEnter(0)
         machine.onTick(180)
         machine.onPointerExit(1_000)
-        assertEquals(IslandState.Peek, machine.onTick(1_349))
-        assertEquals(IslandState.Collapsed, machine.onTick(1_350))
+        assertEquals(IslandState.Peek, machine.onTick(1_179))
+        assertEquals(IslandState.Collapsed, machine.onTick(1_180))
     }
 
     @Test
@@ -50,6 +50,15 @@ class IslandStateMachineTest {
         val machine = IslandStateMachine()
         machine.onPointerEnter(0)
         assertEquals(IslandState.Expanded, machine.onActivate())
+    }
+
+    @Test
+    fun expandedIgnoresPointerExit() {
+        val machine = IslandStateMachine()
+        machine.onActivate()
+        machine.onPointerExit(1_000)
+        assertEquals(IslandState.Expanded, machine.onTick(10_000))
+        assertFalse(machine.isTransitionPending(10_000))
     }
 
     @Test
@@ -85,8 +94,11 @@ class IslandStateMachineTest {
         machine.onPointerEnter(0)
         assertTrue(machine.isTransitionPending(0))
         machine.onTick(180)
-        assertTrue(machine.isTransitionPending(180))
-        machine.onTick(780)
-        assertFalse(machine.isTransitionPending(780))
+        assertFalse(machine.isTransitionPending(180))
+
+        machine.onPointerExit(500)
+        assertTrue(machine.isTransitionPending(500))
+        machine.onTick(680)
+        assertFalse(machine.isTransitionPending(680))
     }
 }

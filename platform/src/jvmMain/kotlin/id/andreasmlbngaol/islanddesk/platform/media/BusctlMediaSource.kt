@@ -28,7 +28,7 @@ class BusctlMediaSource : MediaSource {
             }
         }
         val chosen = tracks.firstOrNull { it.playing } ?: tracks.firstOrNull() ?: return null
-        lastPlayer = chosen.player
+        lastPlayer = chosen.busName
         return chosen
     }
 
@@ -55,7 +55,7 @@ class BusctlMediaSource : MediaSource {
             "/org/mpris/MediaPlayer2", "org.freedesktop.DBus.Properties",
             "GetAll", "s", "org.mpris.MediaPlayer2.Player",
         ) ?: return null
-        return parseMediaTrack(output, displayName(player))
+        return parseMediaTrack(output, displayName(player), player)
     }
 
     private fun displayName(player: String): String {
@@ -74,7 +74,11 @@ internal fun parsePlayerNames(output: String): List<String> {
     }
 }
 
-internal fun parseMediaTrack(output: String, playerName: String): MediaTrack? {
+internal fun parseMediaTrack(
+    output: String,
+    playerName: String,
+    busName: String = playerName,
+): MediaTrack? {
     val root = runCatching { Json.parseToJsonElement(output).jsonObject }.getOrNull() ?: return null
     val props = root["data"]?.jsonArray?.firstOrNull()?.jsonObject ?: return null
 
@@ -92,6 +96,7 @@ internal fun parseMediaTrack(output: String, playerName: String): MediaTrack? {
 
     return MediaTrack(
         player = playerName,
+        busName = busName,
         title = title,
         artist = artist,
         album = meta("xesam:album")?.jsonPrimitive?.content.orEmpty(),

@@ -40,7 +40,7 @@ fun parseIpcCommand(args: List<String>): IpcCommand? {
         "activity" -> when (clean.getOrNull(1)?.lowercase()) {
             "start" -> {
                 val minutes = clean.getOrNull(2)?.toIntOrNull() ?: 25
-                val title = clean.drop(3).joinToString(" ").ifBlank { "Fokus" }
+                val title = clean.drop(3).joinToString(" ").ifBlank { "Focus" }
                 IpcCommand.StartActivity(title, minutes)
             }
             "stop" -> IpcCommand.StopActivity

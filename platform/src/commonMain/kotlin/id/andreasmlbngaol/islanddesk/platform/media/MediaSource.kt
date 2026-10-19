@@ -2,6 +2,7 @@ package id.andreasmlbngaol.islanddesk.platform.media
 
 data class MediaTrack(
     val player: String,
+    val busName: String = player,
     val title: String,
     val artist: String,
     val album: String,

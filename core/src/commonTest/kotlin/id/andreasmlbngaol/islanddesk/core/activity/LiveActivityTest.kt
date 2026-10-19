@@ -11,7 +11,7 @@ class LiveActivityTest {
     fun countsDownWithInjectedClock() {
         var now = 1_000L
         val controller = LiveActivityController { now }
-        controller.start("Tulis", minutes = 1)
+        controller.start("Write", minutes = 1)
         assertEquals(60_000L, controller.remainingMs())
         assertEquals(0f, controller.progress())
 
@@ -29,9 +29,19 @@ class LiveActivityTest {
     }
 
     @Test
+    fun acceptsCustomHoursMinutesSeconds() {
+        var now = 0L
+        val controller = LiveActivityController { now }
+        controller.startSeconds("Deep work", 1 * 3_600L + 2 * 60L + 3L)
+        assertEquals(3_723_000L, controller.current!!.durationMs)
+        assertEquals("01:02:03", LiveActivityController.format(controller.remainingMs()))
+    }
+
+    @Test
     fun formatsMinutesAndSeconds() {
         assertEquals("25:00", LiveActivityController.format(25 * 60_000L))
         assertEquals("00:01", LiveActivityController.format(1L))
         assertEquals("00:00", LiveActivityController.format(-5L))
+        assertEquals("01:00:00", LiveActivityController.format(3_600_000L))
     }
 }

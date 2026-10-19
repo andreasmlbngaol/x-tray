@@ -36,10 +36,10 @@ class SettingsStoreTest {
     @Test
     fun invalidValuesAreClamped() {
         val store = SettingsStore(MemoryPersistence())
-        store.update { it.copy(hoverIntentMs = 5L, clipboardMaxItems = 999, focusMinutes = 0) }
+        store.update { it.copy(hoverIntentMs = 5L, clipboardMaxItems = 999, focusSeconds = 0) }
         assertEquals(50L, store.current.hoverIntentMs)
         assertEquals(50, store.current.clipboardMaxItems)
-        assertEquals(1, store.current.focusMinutes)
+        assertEquals(1, store.current.focusSeconds)
     }
 
     @Test

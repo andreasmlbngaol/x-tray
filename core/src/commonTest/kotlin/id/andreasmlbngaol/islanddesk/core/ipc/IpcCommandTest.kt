@@ -21,7 +21,7 @@ class IpcCommandTest {
 
     @Test
     fun parsesActivityAndDnd() {
-        assertEquals(IpcCommand.StartActivity("Fokus", 25), parseIpcCommand(listOf("activity", "start")))
+        assertEquals(IpcCommand.StartActivity("Focus", 25), parseIpcCommand(listOf("activity", "start")))
         assertEquals(
             IpcCommand.StartActivity("Tulis laporan", 45),
             parseIpcCommand(listOf("activity", "start", "45", "Tulis", "laporan")),
@@ -43,7 +43,7 @@ class IpcCommandTest {
         val commands = listOf(
             IpcCommand.Toggle,
             IpcCommand.Notify("hello world"),
-            IpcCommand.StartActivity("Fokus", 30),
+            IpcCommand.StartActivity("Focus", 30),
             IpcCommand.SetDnd(true),
         )
         for (command in commands) {
