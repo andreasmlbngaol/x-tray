@@ -6,27 +6,41 @@ Desktop dan Material 3 Expressive.
 
 ## Fitur
 
-- **Tiga level**: collapsed (jam, tanggal, baterai), peek (jam bertumpuk
-  HH/MM/ss, media yang diputar, baterai, notifikasi terbaru), expanded
-  (rail modul + konten).
+- **Tiga level**: collapsed (jam, tanggal, kecepatan upload/download,
+  baterai), peek (jam bertumpuk HH/MM/ss + tanggal, media dengan kontrol
+  putar, baterai, notifikasi terbaru), expanded (rail modul + konten).
+  Informasi paling penting ada di collapsed, detail bertambah di peek, dan
+  semuanya di expanded.
 - **Interaksi**: hover membuka peek, kursor keluar menutup peek, klik
   membuka expanded. Expanded hanya menutup lewat Esc, klik di luar, atau
   pindah window — bukan saat kursor keluar.
 - **Media (MPRIS)** lewat `busctl`: judul, artis, album, progres, dan
-  kontrol putar/jeda/berikutnya/sebelumnya.
-- **Clipboard**: riwayat teks di memori, klik untuk menyalin ulang, bisa
-  dijeda.
-- **Shelf**: tarik file ke island, buka atau hapus dari panel.
-- **Fokus**: timer countdown dengan durasi kustom jam/menit/detik,
-  tampil juga di peek.
-- **Kontrol sistem**: volume, mute, mic, kecerahan, Wi-Fi, Bluetooth, DND.
-- **Notifikasi** lewat IPC (`islanddesk notify`).
-- **Pengaturan** di dalam island: tema System/Light/Dark, reduce motion,
-  DND, autostart, monitor, jeda hover/tutup.
+  kontrol putar/jeda/berikutnya/sebelumnya — tersedia juga di peek supaya
+  tidak perlu membuka expanded.
+- **Clipboard**: riwayat teks di memori, klik untuk menyalin ulang, plus
+  switch "Recording" untuk menjeda/melanjutkan penangkapan.
+- **Shelf**: tarik file ke island, lihat thumbnail gambar, lalu tarik lagi
+  keluar ke file manager (drag-out XDND) atau buka/hapus dari panel.
+- **Fokus**: durasi bisa diketik (jam/menit/detik, tanpa batas 12 jam),
+  hitung mundur menampilkan detik dan jam selesai; tampil besar di peek
+  selama sesi berjalan.
+- **Kontrol sistem**: slider volume dan kecerahan, mute menyatu dengan
+  volume, toggle mic/Wi-Fi/Bluetooth/DND memakai warna sebagai status
+  (tanpa label "On/Off").
+- **Power menu** di header expanded: suspend, reboot, shutdown — dengan
+  konfirmasi.
+- **Notifikasi** lewat IPC (`islanddesk notify`) atau tombol "Send a test
+  notification" di Settings; muncul sebagai banner di atas modul aktif dan
+  di baris bawah peek.
+- **Pengaturan** di dalam island: tema System/Light/Dark, lima warna aksen
+  (Navy, Violet, Emerald, Amber, Rose), reduce motion, DND, autostart,
+  hide over maximized, monitor, jeda hover/tutup, dan reset ke default.
 - **Drag & drop** file ke island memakai drag-and-drop Compose native.
 - **Window**: transparan, tanpa dekorasi, selalu di atas, tidak muncul di
   taskbar, click-through di luar bentuk island (XShape).
-- **Auto-hide** saat ada window fullscreen.
+- **Auto-hide** saat ada window fullscreen atau maximized (bisa dimatikan
+  di Settings). Saat tersembunyi, panggil lewat tray "Show island" atau
+  `islanddesk show`.
 - **Single instance**, tray icon, autostart XDG, CLI/IPC lewat Unix socket.
 
 ## Kebutuhan

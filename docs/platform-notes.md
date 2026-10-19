@@ -132,10 +132,20 @@ kelak ada backend Wayland native.
 - `isAutoRequestFocus = false` mencegah window merebut fokus saat muncul.
 - Klik di luar island terdeteksi lewat `WindowFocusListener`: saat window
   kehilangan fokus dan state sedang `Expanded`, island langsung mengecil.
-- Auto-hide fullscreen memakai polling 2 detik: `_NET_ACTIVE_WINDOW` di
-  root, lalu cek `_NET_WM_STATE_FULLSCREEN` pada window aktif. Polling
-  dipilih karena listener X11 event membutuhkan event loop sendiri; bebannya
-  satu query ringan per 2 detik.
+- Auto-hide memakai polling 1 detik: `_NET_ACTIVE_WINDOW` di root, lalu
+  cek `_NET_WM_STATE_FULLSCREEN` atau pasangan
+  `_NET_WM_STATE_MAXIMIZED_VERT` + `_NET_WM_STATE_MAXIMIZED_HORZ` pada
+  window aktif. Window maximized menaruh tab browser tepat di bawah panel,
+  jadi island ikut menyingkir. Polling dipilih karena listener X11 event
+  membutuhkan event loop sendiri; bebannya satu query ringan per detik.
+- Window aktif diabaikan bila `_NET_WM_PID` sama dengan PID IslandDesk,
+  supaya mengklik island tidak pernah menyembunyikannya.
+- Visibilitas diterapkan dari loop polling 300 ms, bukan dari
+  `LaunchedEffect` yang di-key pada state. Saat window disembunyikan
+  (`isVisible = false`) Compose berhenti meminta frame, sehingga efek
+  berbasis state tidak dijalankan lagi dan `islanddesk show` tidak akan
+  pernah mengembalikan window. Loop biasa tetap berjalan karena hanya
+  memakai `delay` pada dispatcher Swing.
 - DND diterapkan sebagai preferensi: hover tidak membuka panel dan
   `islanddesk notify` dijawab `suppressed`.
 - Multi-monitor: `DisplayInfo.screens()` membaca semua `ScreenDevice`;
@@ -199,12 +209,36 @@ sehingga drop tidak pernah sampai ke listener. Dengan modifier Compose,
 
 Verifikasi: `xprop` menunjukkan `XdndAware(ATOM) = BITMAP` pada window.
 
+Drag keluar (shelf → file manager) memakai `Modifier.dragAndDropSource`
+dengan `DragAndDropTransferData` yang membungkus `java.awt.datatransfer.Transferable`
+berisi `DataFlavor.javaFileListFlavor`. API ini hanya ada di source set
+desktop, jadi dibungkus `expect fun Modifier.fileDragSource(path)` di
+commonMain dan diimplementasikan di `ui/src/jvmMain`.
+
 ## Tema
 
 `themeMode` di `settings.json` bernilai `System`, `Light`, atau `Dark`.
-`System` memakai `isSystemInDarkTheme()` dari Compose Desktop. Skema warna
-terang dan gelap sudah didefinisikan di `ui/theme/Color.kt`; island memakai
-gradien tonal tipis agar tidak terlihat seperti kotak datar.
+`System` memakai `isSystemInDarkTheme()` dari Compose Desktop.
+
+`accentColor` memilih salah satu dari lima keluarga aksen (Navy, Violet,
+Emerald, Amber, Rose). Alih-alih menyimpan 10 skema warna manual,
+`ui/theme/Color.kt` menyimpan satu hue + bobot saturasi per aksen lalu
+membangun seluruh peran tonal dengan `Color.hsl`. Hasilnya semua aksen
+punya hubungan kontras yang sama; Navy adalah default dan paling dekat
+dengan permukaan netral biru gelap.
+
+Island memakai gradien tonal tipis agar tidak terlihat seperti kotak datar.
+
+## Kecepatan jaringan, volume, dan power
+
+- Kecepatan up/down dibaca dari `/sys/class/net/*/statistics/rx_bytes` dan
+  `tx_bytes` (kecuali `lo`), lalu dihitung selisihnya per detik. Sampel
+  pertama selalu 0 karena belum ada pembanding. Tidak perlu root.
+- Volume memakai `wpctl set-volume @DEFAULT_AUDIO_SINK@ N%`; kecerahan
+  memakai `brightnessctl set N%`. Keduanya dipanggil hanya saat slider
+  dilepas (`onValueChangeFinished`), bukan setiap frame.
+- Power menu memakai `systemctl poweroff|reboot|suspend`. Konfirmasi
+  ditampilkan lebih dulu karena aksi ini tidak bisa dibatalkan.
 
 ## Tray dan autostart
 

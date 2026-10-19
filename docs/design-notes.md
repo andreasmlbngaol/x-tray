@@ -344,8 +344,8 @@ Prinsipnya: expressive dipakai pada **titik interaksi** (tekan, pilih, buka), bu
 
 | State | Lebar | Tinggi | Padding | Radius | Catatan |
 |---|---|---|---|---|---|
-| Collapsed | 152–200 dp (konten) | 36 dp | 12–14 dp horizontal | 18 dp | jam + baterai; window hit 48 dp |
-| Peek | 420 dp | 140 dp | 16 dp | 34 dp | jam HH/MM/ss, now playing, baterai, notifikasi |
+| Collapsed | 244 dp | 38 dp | 12 dp horizontal | 19 dp | jam + tanggal + speed + baterai |
+| Peek | 420 dp | 140 dp | 16 dp | 34 dp | jam HH/MM/ss + tanggal, media + kontrol, baterai, notifikasi/fokus |
 | Expanded | 460 dp | 620 dp | 16 dp | 34 dp | rail modul + konten (tanpa footer) |
 | Tab menempel | sama | sama | sama | atas 0, bawah 32 dp, fillet 10 dp | default layar tanpa notch |
 
@@ -353,33 +353,38 @@ Angka ini adalah titik awal, bukan final. Akan divalidasi di Fase 1 pada layar 1
 
 ### 5.2 Tiga level informasi
 
-**Collapsed — 36 dp, glance < 1 detik:**
+**Collapsed — 38 dp, glance < 1 detik:**
 
 ```
-┌──────────────────────────┐
-│  09:41        ▮▮▮ 82%    │
-└──────────────────────────┘
+┌──────────────────────────────────────────┐
+│ 09:41  Sen, 19 Okt │  ↓1.2M ↑240K ▮ 82% │
+└──────────────────────────────────────────┘
 ```
 
-- Satu informasi dominan: jam.
-- Baterai sebagai ikon + persen kecil.
+- Satu informasi dominan: jam, dengan tanggal di sebelahnya.
+- Kecepatan jaringan hanya muncul saat ada trafik; idle = ruang kembali ke baterai.
+- Baterai sebagai ikon + persen; lebar mengikuti konten, tidak pernah dipecah ke dua baris.
 - Tidak ada tab, tidak ada teks sekunder.
-- Lebar mengikuti konten; tidak dipaksa penuh.
+- Kiri dan kanan dipisah `SpaceBetween` supaya ruang kosong berada di tengah, bukan menumpuk di kanan.
 
-**Peek — 100 dp:**
+**Peek — 140 dp:**
 
 ```
 ┌────────────────────────────────────────────┐
-│ 09:41        │ ♪ Now playing      │ ▮ 82%  │
-│ Sen, 19 Okt  │ Title — Artist     │ Wi-Fi  │
-│              │ ▶  ───────────     │ 10:30  │
+│ 09        │ ♪ Title — Artist    ▮ 82%     │
+│ 41        │ ────────────────────          │
+│ ss        │ 01:12 / 04:20   ⏮ ▶ ⏭        │
+│ Sen, 19   │ [ notifikasi terbaru ]        │
 └────────────────────────────────────────────┘
 ```
 
-- Kiri: jam + tanggal.
-- Tengah: media mini (artwork 40 dp, judul, artis, play/pause 32 dp, progress tipis).
-- Kanan: baterai, Wi-Fi, event berikutnya.
-- Tetap satu baris visual; tidak ada scroll.
+- Kiri: jam bertumpuk HH/MM/ss + tanggal (tanggal wajib ada, sama seperti collapsed).
+- Kanan atas: artwork, judul, artis, DND, baterai.
+- Kanan tengah: progress wavy + posisi/durasi.
+- Kanan bawah: kontrol transport mini (prev/play-pause/next) supaya tidak perlu membuka expanded.
+- Baris paling bawah dipakai notifikasi terbaru, atau pengingat fokus.
+- Saat sesi fokus aktif, seluruh kolom kanan diganti hero fokus: judul, hitung mundur 34 sp dengan detik, jam selesai, dan progress — fokus adalah informasi utama pada momen itu.
+- Tetap satu kolom tanpa scroll.
 
 **Expanded — panel penuh:**
 
@@ -435,16 +440,13 @@ Aturan:
 
 ### 5.5 Warna
 
-- Default gelap: surface island mendekati hitam netral, bukan ungu gelap, agar menyatu dengan bezel.
-- Draft role:
-  - `surfaceContainerLowest` `#08080A`
-  - `surfaceContainer` `#121216`
-  - `surfaceContainerHigh` `#1A1A20`
-  - `onSurface` `#E8E6EC`
-  - `onSurfaceVariant` `#B9B5C2`
-  - `outlineVariant` `#3A3742`
-  - `primary` dari seed (default indigo/violet)
-- Seed default: `#6750A4` (baseline M3) atau seed pilihan pengguna. Skema tonal dihitung dari seed, bukan hardcode semua role.
+- Default gelap: surface island mendekati hitam netral dengan sedikit tint biru, agar menyatu dengan bezel.
+- Aksen default **Navy** (bukan ungu baseline M3). Pengguna bisa memilih lima keluarga aksen di Settings: Navy, Violet, Emerald, Amber, Rose.
+- Implementasi: `ui/theme/Color.kt` menyimpan `AccentSpec(hue, saturation)` per aksen lalu menghasilkan seluruh peran tonal lewat `Color.hsl`. Tidak ada 10 skema hardcode; satu rumus tonal menjaga kontras antar aksen tetap konsisten.
+  - Dark: `primary` = hsl(hue, s×0.55, 0.78), `primaryContainer` = hsl(hue, s×0.70, 0.32), surface = hsl(hue, 0.16, 0.05).
+  - Light: `primary` = hsl(hue, s×0.75, 0.34), `primaryContainer` = hsl(hue, s×0.70, 0.90), surface = hsl(hue, 0.24, 0.985).
+  - `tertiary` memakai hue komplementer (+150°) agar tetap ada aksen sekunder tanpa menambah input pengguna.
+- Swatch di Settings memakai `accentSwatch()`, versi pekat dari aksen yang sama.
 - Aksen artwork opsional: ekstrak 1 warna dominan, batasi chroma, terapkan ke `primary`/`secondary`; jangan ubah surface.
 - Kontras: teks utama ≥ 4.5:1, teks sekunder ≥ 3:1 untuk ukuran besar; ikon status ≥ 3:1.
 - Tema terang opsional; jangan menjadi default.
