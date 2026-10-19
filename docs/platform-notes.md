@@ -1,6 +1,6 @@
-# Catatan Platform — IslandDesk
+# Catatan Platform — X-Tray
 
-Dokumen ini mencatat perilaku nyata window IslandDesk di lingkungan pengembangan,
+Dokumen ini mencatat perilaku nyata window X-Tray di lingkungan pengembangan,
 bukan asumsi. Semua angka berasal dari log aplikasi dan alat X11.
 
 Tanggal pengujian: 2026-10-19
@@ -20,7 +20,7 @@ Tanggal pengujian: 2026-10-19
 Log startup:
 
 ```
-IslandDesk: session=wayland desktop=zorin:GNOME displayServer=wayland-0 wayland=true
+X-Tray: session=wayland desktop=zorin:GNOME displayServer=wayland-0 wayland=true
 ```
 
 ## Window
@@ -33,7 +33,7 @@ Hasil inspeksi X11 saat collapsed:
 
 | Alat | Hasil |
 | --- | --- |
-| `wmctrl -l` | window terdaftar dengan judul `IslandDesk` |
+| `wmctrl -l` | window terdaftar dengan judul `X-Tray` |
 | `xwininfo` | `224x48+848+0`, Depth 32, Map State `IsViewable` |
 | `xprop` | `_NET_WM_STATE_ABOVE`, `_NET_WM_WINDOW_TYPE_NORMAL` |
 
@@ -82,7 +82,7 @@ Mitigasi yang dipakai (lihat `Main.kt`):
 
 - Sesi Wayland -> `skiko.renderApi=SOFTWARE` otomatis.
 - Sesi X11 native -> `OPENGL`.
-- Override manual: `ISLANDDESK_RENDER_API=OPENGL|SOFTWARE`.
+- Override manual: `XTRAY_RENDER_API=OPENGL|SOFTWARE`.
 
 Konsekuensi: di Wayland rendering memakai CPU. Untuk permukaan sekecil ini
 (224x48 saat collapsed) beban masih wajar, tetapi perlu diukur ulang saat
@@ -102,8 +102,8 @@ dipakai kembali.
   (focus lost), atau perintah IPC.
 
 Implikasi untuk pengujian otomatis: jangan bergantung pada injeksi pointer
-X11. Gunakan `ISLANDDESK_DEMO=cycle` (driver sementara) atau nanti IPC
-`islanddesk toggle` untuk menguji transisi.
+X11. Gunakan `XTRAY_DEMO=cycle` (driver sementara) atau nanti IPC
+`x-tray toggle` untuk menguji transisi.
 
 ## Screenshot
 
@@ -143,7 +143,7 @@ kelak ada backend Wayland native.
   region XShape ikut mengecil sehingga sekitarnya click-through.
 - Polling dipilih karena listener X11 event membutuhkan event loop sendiri;
   bebannya satu query ringan per detik.
-- Window aktif diabaikan bila `_NET_WM_PID` sama dengan PID IslandDesk,
+- Window aktif diabaikan bila `_NET_WM_PID` sama dengan PID X-Tray,
   supaya mengklik island tidak pernah menyembunyikannya.
 - Window tidak pernah di-unmap. "Sembunyikan" berarti state dormant yang
   sama dengan kasus maximized (garis 120x6), jadi hover tetap diterima dan
@@ -151,7 +151,7 @@ kelak ada backend Wayland native.
   tidak dipetakan Compose berhenti meminta frame, sehingga tidak ada cara
   mengembalikannya lewat hover.
 - DND diterapkan sebagai preferensi: hover tidak membuka panel dan
-  `islanddesk notify` dijawab `suppressed`.
+  `x-tray notify` dijawab `suppressed`.
 - Multi-monitor: `DisplayInfo.screens()` membaca semua `ScreenDevice`;
   `monitorIndex` di pengaturan menentukan layar tujuan. Posisi dihitung dari
   usable bounds monitor tersebut.
@@ -166,7 +166,7 @@ window di bawahnya.
 Catatan:
 
 - Window dicari lewat `_NET_CLIENT_LIST` + `_NET_WM_PID`, dengan fallback
-  ke `WM_NAME` = `IslandDesk`. Pendekatan ini menghindari refleksi ke
+  ke `WM_NAME` = `X-Tray`. Pendekatan ini menghindari refleksi ke
   `sun.awt` yang diblokir module system Java 21.
 - Region diperbarui saat state berubah (ukuran target), bukan setiap frame
   animasi. Selama ~300 ms transisi, area input masih memakai ukuran lama.
@@ -187,27 +187,27 @@ mengulang penulisan 6 kali dengan jeda 250 ms setelah window dibuat.
 
 ## IPC dan single instance
 
-- Socket: `$XDG_RUNTIME_DIR/islanddesk.sock` (fallback ke temp dir bila
+- Socket: `$XDG_RUNTIME_DIR/x-tray.sock` (fallback ke temp dir bila
   variabel tidak ada).
 - Protokol: satu baris perintah, satu baris balasan.
-- Lock: `FileChannel.tryLock()` pada `~/.config/islanddesk/instance.lock`.
+- Lock: `FileChannel.tryLock()` pada `~/.config/x-tray/instance.lock`.
   Proses kedua meneruskan `show` lalu keluar.
 
 Diuji langsung di sesi ini:
 
 ```text
-$ islanddesk state      -> Collapsed
-$ islanddesk toggle     -> ok
-$ islanddesk state      -> Expanded
-$ islanddesk notify ... -> ok
-$ islanddesk quit       -> ok
+$ x-tray state      -> Collapsed
+$ x-tray toggle     -> ok
+$ x-tray state      -> Expanded
+$ x-tray notify ... -> ok
+$ x-tray quit       -> ok
 ```
 
 ## Drag and drop
 
 ### Notifikasi sistem (`org.freedesktop.Notifications`)
 
-IslandDesk mengekspor objek D-Bus di `/org/freedesktop/Notifications` lewat
+X-Tray mengekspor objek D-Bus di `/org/freedesktop/Notifications` lewat
 `dbus-java` (core + transport native unixsocket, tanpa JNI tambahan) dan
 meminta nama `org.freedesktop.Notifications`.
 
@@ -220,13 +220,13 @@ dijawab `EXISTS`). Karena itu alurnya:
 2. Kalau gagal, baca pemilik nama lewat `GetConnectionUnixProcessID` dan
    periksa `/proc/<pid>/cmdline`. Hanya kalau itu helper GNOME, proses
    dihentikan (SIGTERM) lalu nama diminta ulang (maks 3 detik).
-3. Pemilik lain (mis. dunst) dibiarkan hidup: IslandDesk melaporkan gagal dan
+3. Pemilik lain (mis. dunst) dibiarkan hidup: X-Tray melaporkan gagal dan
    notifikasi asli tetap berjalan.
 
 Saat berhenti, nama dilepas lalu `org.gnome.Shell.Notifications` di-`Ping`.
 Itu memicu aktivasi D-Bus yang menjalankan helper lagi, dan helper baru
 langsung meminta kembali `org.freedesktop.Notifications`. Restart ini sudah
-diuji: setelah `islanddesk quit`, `busctl --user status` menunjukkan proses
+diuji: setelah `x-tray quit`, `busctl --user status` menunjukkan proses
 `gjs` memegang nama itu lagi.
 
 Antarmuka yang diekspor: `Notify`, `CloseNotification`, `GetCapabilities`,
@@ -285,25 +285,41 @@ Island memakai gradien tonal tipis agar tidak terlihat seperti kotak datar.
 - Tray memakai `java.awt.SystemTray` dengan menu Buka/Ciutkan/DND/Keluar.
   Di GNOME tray hanya terlihat bila ekstensi AppIndicator aktif; kegagalan
   tidak membuat aplikasi berhenti.
-- Autostart menulis `~/.config/autostart/islanddesk.desktop`. `Exec`
-  memakai `ISLANDDESK_EXEC`, lalu `/opt/islanddesk/bin/islanddesk`, lalu
+- Autostart menulis `~/.config/autostart/x-tray.desktop`. `Exec`
+  memakai `XTRAY_EXEC`, lalu `/opt/x-tray/bin/x-tray`, lalu
   perintah proses saat ini.
 
 ## Logging
 
-Log ditulis ke stdout dan ke `~/.local/state/islanddesk/islanddesk.log`.
-Berkas dipotong (ditimpa kosong) saat melewati 1 MB. `ISLANDDESK_DEBUG=1`
+Log ditulis ke stdout dan ke `~/.local/state/x-tray/x-tray.log`.
+Berkas dipotong (ditimpa kosong) saat melewati 1 MB. `XTRAY_DEBUG=1`
 menambahkan log debug dan stack trace.
+
+## Rilis, minifikasi, dan konsumsi daya
+
+- `packageReleaseDeb` menjalankan ProGuard 7.8.0 (shrink + optimize, tanpa
+  obfuscate). Aturan ada di `app/proguard-rules.pro`; yang harus dijaga:
+  JNA (interface dan struktur), dbus-java (interface beranotasi,
+  `DBusSerializable`, `DBusSignal`), serta provider `ServiceLoader`
+  (`org.slf4j.nop`, `org.freedesktop.dbus.spi.transport.ITransportProvider`).
+- Runtime image jpackage tidak memuat `jdk.security.auth`, padahal SASL
+  dbus-java memakai `com.sun.security.auth.module.UnixSystem`. Tanpa
+  `modules("jdk.security.auth", "java.security.sasl")` koneksi bus gagal
+  dengan `NoClassDefFoundError` dan daemon notifikasi tidak pernah jalan —
+  build tetap sukses, jadi ini hanya terlihat saat aplikasi dijalankan.
+- Ukuran `.deb`: 90 MB tanpa minify, 43 MB pada build release.
+- Terukur pada sesi ini (Wayland, renderer SOFTWARE, collapsed, tanpa
+  notifikasi): sekitar 3% CPU satu inti, RSS ~259 MB, 57 thread.
 
 ## Perintah verifikasi yang dipakai
 
 ```bash
 ./gradlew :core:jvmTest :platform:jvmTest
 ./gradlew :app:run
-ISLANDDESK_DEMO=cycle ./gradlew :app:run
-ISLANDDESK_RENDER_API=OPENGL ./gradlew :app:run
+XTRAY_DEMO=cycle ./gradlew :app:run
+XTRAY_RENDER_API=OPENGL ./gradlew :app:run
 ./gradlew :app:run --args='state'
-./gradlew :app:packageDeb
+./gradlew :app:packageReleaseDeb
 wmctrl -l
 xwininfo -id <window-id>
 xprop -id <window-id>

@@ -17,19 +17,29 @@ dependencies {
 
 compose.desktop {
     application {
-        mainClass = "id.andreasmlbngaol.islanddesk.app.MainKt"
+        mainClass = "id.andreasmlbngaol.xtray.app.MainKt"
+
+        buildTypes.release {
+            proguard {
+                isEnabled = true
+                configurationFiles.from(project.file("proguard-rules.pro"))
+            }
+        }
 
         nativeDistributions {
             targetFormats(TargetFormat.Deb)
-            packageName = "islanddesk"
-            packageVersion = "0.1.0"
+            // dbus-java authenticates with com.sun.security.auth.module.UnixSystem,
+            // which lives in jdk.security.auth and is not part of the default image.
+            modules("jdk.security.auth", "java.security.sasl")
+            packageName = "x-tray"
+            packageVersion = providers.gradleProperty("appVersion").getOrElse("1.0.0")
             description = "Dynamic Island untuk desktop Linux"
-            vendor = "IslandDesk"
-            copyright = "(c) 2026 IslandDesk"
+            vendor = "X-Tray"
+            copyright = "(c) 2026 X-Tray"
 
             linux {
-                iconFile.set(project.file("icons/islanddesk.png"))
-                debMaintainer = "islanddesk@localhost"
+                iconFile.set(project.file("icons/x-tray.png"))
+                debMaintainer = "x-tray@localhost"
                 appCategory = "Utility"
                 menuGroup = "Utility"
                 shortcut = true

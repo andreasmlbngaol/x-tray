@@ -23,5 +23,5 @@ kotlin {
 
 compose.resources {
     publicResClass = true
-    packageOfResClass = "id.andreasmlbngaol.islanddesk.ui.resources"
+    packageOfResClass = "id.andreasmlbngaol.xtray.ui.resources"
 }

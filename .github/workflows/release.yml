@@ -1,0 +1,57 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  deb:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Install packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fakeroot
+
+      - name: Read version from tag
+        id: version
+        run: echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Test
+        run: ./gradlew :core:jvmTest :platform:jvmTest --no-daemon
+
+      - name: Build minified .deb
+        run: >-
+          ./gradlew :app:packageReleaseDeb --no-daemon
+          -PappVersion=${{ steps.version.outputs.value }}
+
+      - name: Collect artifact
+        run: |
+          mkdir -p dist
+          cp app/build/compose/binaries/main-release/deb/*.deb \
+            "dist/x-tray_${{ steps.version.outputs.value }}_amd64.deb"
+          ls -lh dist
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.deb
+          generate_release_notes: true
+          fail_on_unmatched_files: true

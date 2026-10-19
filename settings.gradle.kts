@@ -1,4 +1,4 @@
-rootProject.name = "islanddesk"
+rootProject.name = "x-tray"
 
 pluginManagement {
     repositories {

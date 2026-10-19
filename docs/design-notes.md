@@ -1,4 +1,4 @@
-# IslandDesk — Catatan Desain (Fase 0)
+# X-Tray — Catatan Desain (Fase 0)
 
 Status: **draft untuk persetujuan**
 Tanggal: 2026-10-19
@@ -31,13 +31,13 @@ Target kerja: Zorin OS (Linux, GNOME), arsitektur siap multiplatform.
 - Dilarang: redistribusi software atau **derivative work**, dalam bentuk biner maupun source, tanpa izin tertulis.
 - Dilarang: penggunaan komersial, termasuk menjual/menerbitkan di platform apa pun.
 
-Implikasi untuk IslandDesk:
+Implikasi untuk X-Tray:
 
 - Kita **tidak menyalin source code** PixelPlayer, termasuk potongan composable, helper, atau konstanta.
 - Kita **tidak menyalin aset**: font Google Sans Flex, ikon, drawable, string, screenshot, atau file konfigurasi.
 - Kita **tidak memakai** library pihak ketiga yang hanya ada karena dipakai PixelPlayer (mis. `racra.compose.smooth_corner_rect_library`) tanpa memeriksa lisensinya sendiri.
-- Yang dipakai adalah **observasi tingkat tinggi**: proporsi, hierarki, pengelompokan kontrol, penggunaan shape dan motion. Implementasi IslandDesk ditulis dari nol dengan token dan komponen sendiri.
-- Catatan ini bukan nasihat hukum. Jika IslandDesk akan didistribusikan, sebaiknya lakukan review lisensi terpisah.
+- Yang dipakai adalah **observasi tingkat tinggi**: proporsi, hierarki, pengelompokan kontrol, penggunaan shape dan motion. Implementasi X-Tray ditulis dari nol dengan token dan komponen sendiri.
+- Catatan ini bukan nasihat hukum. Jika X-Tray akan didistribusikan, sebaiknya lakukan review lisensi terpisah.
 
 ---
 
@@ -95,7 +95,7 @@ File kunci: `app/src/main/java/com/theveloper/pixelplay/ui/theme/Theme.kt`.
 - Ada `LocalPixelPlayDarkTheme` dan `LocalShowScrollbar` sebagai composition local.
 - `PixelPlayStatusBarStyle` mengatur status/navigation bar Android secara transparan.
 
-**Terjemahan:** IslandDesk akan memakai `MaterialExpressiveTheme` secara eksplisit, default gelap, dan tidak memakai dynamic color Android. Seed color dan skema tonal dihitung sendiri di desktop.
+**Terjemahan:** X-Tray akan memakai `MaterialExpressiveTheme` secara eksplisit, default gelap, dan tidak memakai dynamic color Android. Seed color dan skema tonal dihitung sendiri di desktop.
 
 ### 4.2 Warna
 
@@ -116,7 +116,7 @@ File kunci: `ui/theme/Color.kt`, `ui/theme/ColorRoles.kt`.
   - panel bawah: `surfaceContainerLowest.copy(alpha = 0.7f)`.
 - Alpha sering dipakai untuk meredam permukaan, bukan menambah warna baru.
 
-**Terjemahan:** IslandDesk memakai tonal palette dari satu seed, ditambah opsi aksen artwork yang hanya menyentuh `primary/secondary/tertiary`, bukan surface hitam island. Alpha untuk permukaan sekunder harus dijaga agar kontras teks tetap ≥ 4.5:1.
+**Terjemahan:** X-Tray memakai tonal palette dari satu seed, ditambah opsi aksen artwork yang hanya menyentuh `primary/secondary/tertiary`, bukan surface hitam island. Alpha untuk permukaan sekunder harus dijaga agar kontras teks tetap ≥ 4.5:1.
 
 ### 4.3 Tipografi
 
@@ -133,7 +133,7 @@ File kunci: `ui/theme/Type.kt`.
 - Ada `ExpTitleTypography` terpisah memakai Montserrat dengan `TextGeometricTransform(scaleX = 1.5f)` untuk judul pemasaran.
 - Varian `*Emphasized` dipakai secukupnya: `titleLargeEmphasized` (6×), `bodyLargeEmphasized` (3×), `labelLargeEmphasized` (1×).
 
-**Terjemahan:** IslandDesk tidak memakai Google Sans. Untuk Fase 1 gunakan font sistem desktop (fallback stack) dengan **tabular numerals** untuk jam. Jika ingin karakter rounded, bundel font OFL (mis. Figtree/Manrope/Inter) setelah disetujui. Skala island jauh lebih kecil: jam 18–30 sp, judul modul 14–16 sp, body 12–13 sp, caption 10–11 sp.
+**Terjemahan:** X-Tray tidak memakai Google Sans. Untuk Fase 1 gunakan font sistem desktop (fallback stack) dengan **tabular numerals** untuk jam. Jika ingin karakter rounded, bundel font OFL (mis. Figtree/Manrope/Inter) setelah disetujui. Skala island jauh lebih kecil: jam 18–30 sp, judul modul 14–16 sp, body 12–13 sp, caption 10–11 sp.
 
 ### 4.4 Shape
 
@@ -148,7 +148,7 @@ File kunci: `ui/theme/Shape.kt` dan pemakaian di komponen.
   - `AbsoluteSmoothCornerShape` (library `racra`) untuk squircle halus dengan smoothness 60%.
 - Sudut beranimasi memakai `animateDpAsState` dengan spring, bukan swap shape instan.
 
-**Terjemahan:** IslandDesk memakai satu `IslandShape` kustom yang bisa diinterpolasi (corner radius + concave fillet), bukan dua komponen berbeda. Untuk Fase 1, interpolasi `RoundedCornerShape` sudah cukup; fillet cekung di tepi atas dibuat dengan `GenericShape`/Path. `MaterialShapes` disiapkan untuk aksen ikon/badge, bukan untuk badan panel.
+**Terjemahan:** X-Tray memakai satu `IslandShape` kustom yang bisa diinterpolasi (corner radius + concave fillet), bukan dua komponen berbeda. Untuk Fase 1, interpolasi `RoundedCornerShape` sudah cukup; fillet cekung di tepi atas dibuat dengan `GenericShape`/Path. `MaterialShapes` disiapkan untuk aksen ikon/badge, bukan untuk badan panel.
 
 ### 4.5 Motion
 
@@ -260,7 +260,7 @@ Untuk desktop, nilai 42–48 dp dipertahankan sebagai **target klik**, tetapi ti
 
 ### 4.8 Komponen expressive yang benar-benar dipakai
 
-| Komponen | Pemakaian di PixelPlayer | Relevansi untuk IslandDesk |
+| Komponen | Pemakaian di PixelPlayer | Relevansi untuk X-Tray |
 |---|---|---|
 | `LoadingIndicator` | 35 kemunculan; indikator buffering/loading | Loading modul, sinkronisasi, download |
 | `LinearWavyProgressIndicator` | 8 kemunculan; progres media | Progres media dan download |
@@ -275,7 +275,7 @@ Untuk desktop, nilai 42–48 dp dipertahankan sebagai **target klik**, tetapi ti
 
 Catatan: angka "35/8/4" adalah jumlah kemunculan teks API di source, bukan jumlah instance runtime.
 
-#### 4.8.1 Implementasi aktual di IslandDesk
+#### 4.8.1 Implementasi aktual di X-Tray
 
 | API | Lokasi | Alasan |
 |---|---|---|
@@ -313,7 +313,7 @@ Prinsipnya: expressive dipakai pada **titik interaksi** (tekan, pilih, buka), bu
 
 ---
 
-## 5. Terjemahan ke IslandDesk
+## 5. Terjemahan ke X-Tray
 
 ### 5.1 Token desain awal
 
@@ -549,7 +549,7 @@ Row(gap 12dp)
 
 ## 6. Keputusan yang perlu persetujuan sebelum Fase 1
 
-1. **Nama dan package.** Tetap `IslandDesk`? Ganti package `id.andreasmlbngaol.d_util` sekarang atau nanti? Rename setelah Fase 1 lebih mahal.
+1. **Nama dan package.** Tetap `X-Tray`? Ganti package `id.andreasmlbngaol.d_util` sekarang atau nanti? Rename setelah Fase 1 lebih mahal.
 2. **Ukuran panel.** Final: 220×38 / 420×140 / 460×620 (disesuaikan setelah revisi pengguna).
 3. **Gaya default.** "Tab menempel" untuk layar tanpa notch, sesuai brief. Konfirmasi bahwa ini default.
 4. **Font.** Font sistem + tabular numerals untuk Fase 1, atau langsung bundel font OFL rounded (mis. Figtree/Manrope). Jangan memakai Google Sans dari PixelPlayer.
@@ -562,7 +562,7 @@ Row(gap 12dp)
 ## 7. Rencana Fase 1 (setelah catatan ini disetujui)
 
 1. Pisahkan modul Gradle: `core`, `ui`, `platform`, `modules/*`, `app` (desktop). Untuk Fase 1, minimal `core` + `ui` + `app`.
-2. Buat `IslandDeskTheme` dengan `MaterialExpressiveTheme`, dark scheme dari seed, typography expressive, shapes.
+2. Buat `XTrayTheme` dengan `MaterialExpressiveTheme`, dark scheme dari seed, typography expressive, shapes.
 3. Buat window desktop: `undecorated`, `transparent`, `alwaysOnTop`, posisi tengah atas, tanpa taskbar (eksperimen).
 4. Implementasikan state machine `Collapsed/Peek/Expanded` + hover intent + collapse delay + Esc/klik luar.
 5. Implementasikan `IslandShape` dan animasi bounds; konten dummy per state.
@@ -591,7 +591,7 @@ Kriteria penerimaan Fase 1:
   - `presentation/components/UnifiedPlayerSheetV2.kt`
   - `presentation/screens/CreatePlaylistScreen.kt`
 - Verifikasi API dilakukan dengan `unzip -l` dan `javap` pada artifact Gradle yang terpasang, bukan dari dokumentasi atau ingatan.
-- Tidak ada kode PixelPlayer yang disalin ke IslandDesk.
+- Tidak ada kode PixelPlayer yang disalin ke X-Tray.
 
 ---
 

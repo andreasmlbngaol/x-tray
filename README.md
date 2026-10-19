@@ -1,4 +1,4 @@
-# IslandDesk
+# X-Tray
 
 Dynamic Island untuk desktop Linux: panel kecil di tengah atas layar yang
 membesar saat dibutuhkan. Dibangun dengan Kotlin Multiplatform + Compose
@@ -35,7 +35,7 @@ Desktop dan Material 3 Expressive.
   Saat collapsed island membesar jadi kartu 384x100 (nama aplikasi, judul,
   isi, tombol tutup), saat peek muncul di baris bawah, saat expanded jadi
   banner di atas modul aktif. Bisa dimatikan di Settings → Behaviour.
-  Notifikasi dari IPC tetap ada: `islanddesk notify "..."`.
+  Notifikasi dari IPC tetap ada: `x-tray notify "..."`.
 - **Pengaturan** di dalam island: tema System/Light/Dark, lima aksen preset
   plus input HEX kustom, reduce motion, DND, autostart, shrink over
   maximized, monitor, jeda hover/tutup, About (versi, lisensi, GitHub), dan
@@ -46,7 +46,7 @@ Desktop dan Material 3 Expressive.
 - **Dormant** saat ada window fullscreen atau maximized (bisa dimatikan di
   Settings): island mengecil jadi garis 120x6 dp di tengah atas, hover
   membuka peek, klik membuka expanded — jadi tidak menutupi tab browser tapi
-  tetap bisa dipanggil. Klik kanan di island (atau tray / `islanddesk hide`)
+  tetap bisa dipanggil. Klik kanan di island (atau tray / `x-tray hide`)
   juga mengecilkannya ke garis yang sama; hover di garis membukanya lagi, dan
   setelah itu island kembali ke bar collapsed biasa (tidak terkunci di garis).
 - **Single instance**, tray icon, autostart XDG, CLI/IPC lewat Unix socket.
@@ -77,32 +77,46 @@ Test:
 ./gradlew :core:jvmTest :platform:jvmTest
 ```
 
-Paket Debian:
+Paket Debian (release, di-minify dengan ProGuard):
 
 ```bash
-./gradlew :app:packageDeb
-sudo apt install app/build/compose/binaries/main/deb/islanddesk_0.1.0_amd64.deb
-islanddesk
+./gradlew :app:packageReleaseDeb
+sudo apt install app/build/compose/binaries/main-release/deb/x-tray_1.0.0_amd64.deb
+x-tray
+```
+
+Versi diambil dari properti Gradle `appVersion` (default `1.0.0`), jadi build
+lokal dan rilis CI memakai angka yang sama. Hasil minify: sekitar 43 MB
+(tanpa minify ~90 MB).
+
+## Rilis
+
+Setiap tag `v*` memicu `.github/workflows/release.yml`: test dijalankan,
+`.deb` release di-build dan di-minify, lalu diunggah ke tab **Releases**.
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
 ## CLI / IPC
 
 Saat aplikasi berjalan, perintah dikirim lewat Unix socket
-(`$XDG_RUNTIME_DIR/islanddesk.sock`):
+(`$XDG_RUNTIME_DIR/x-tray.sock`):
 
 ```bash
-islanddesk toggle
-islanddesk expand
-islanddesk collapse
-islanddesk show
-islanddesk hide
-islanddesk state
-islanddesk quit
-islanddesk notify "Build selesai"
-islanddesk activity start 25 "Tulis laporan"
-islanddesk activity stop
-islanddesk dnd on
-islanddesk dnd off
+x-tray toggle
+x-tray expand
+x-tray collapse
+x-tray show
+x-tray hide
+x-tray state
+x-tray quit
+x-tray notify "Build selesai"
+x-tray activity start 25 "Tulis laporan"
+x-tray activity stop
+x-tray dnd on
+x-tray dnd off
 ```
 
 Menjalankan aplikasi kedua tanpa argumen akan meneruskan `show` ke instance
@@ -112,21 +126,21 @@ yang sudah ada, bukan membuat window baru.
 
 | Variabel | Nilai | Keterangan |
 | --- | --- | --- |
-| `ISLANDDESK_RENDER_API` | `SOFTWARE`, `OPENGL` | Paksa backend renderer. Default: SOFTWARE di Wayland, OPENGL di X11. |
-| `ISLANDDESK_DEMO` | `cycle` | Driver sementara untuk menguji transisi tanpa pointer. |
-| `ISLANDDESK_DEBUG` | `1` | Log debug dan stack trace. |
-| `ISLANDDESK_EXEC` | path | Perintah yang ditulis ke entri autostart. |
-| `ISLANDDESK_MODULE` | id modul | Modul yang aktif saat island pertama dibuka. |
-| `ISLANDDESK_SHELF_SEED` | path1,path2 | Isi shelf saat start, untuk menguji drag-out. |
+| `XTRAY_RENDER_API` | `SOFTWARE`, `OPENGL` | Paksa backend renderer. Default: SOFTWARE di Wayland, OPENGL di X11. |
+| `XTRAY_DEMO` | `cycle` | Driver sementara untuk menguji transisi tanpa pointer. |
+| `XTRAY_DEBUG` | `1` | Log debug dan stack trace. |
+| `XTRAY_EXEC` | path | Perintah yang ditulis ke entri autostart. |
+| `XTRAY_MODULE` | id modul | Modul yang aktif saat island pertama dibuka. |
+| `XTRAY_SHELF_SEED` | path1,path2 | Isi shelf saat start, untuk menguji drag-out. |
 
 ## Penyimpanan dan privasi
 
 | Data | Lokasi | Catatan |
 | --- | --- | --- |
-| Pengaturan | `~/.config/islanddesk/settings.json` | JSON, bisa diedit manual |
-| Log | `~/.local/state/islanddesk/islanddesk.log` | Dipotong saat melewati 1 MB |
-| Socket IPC | `$XDG_RUNTIME_DIR/islanddesk.sock` | Hanya untuk user yang sama |
-| Lock instance | `~/.config/islanddesk/instance.lock` | Advisory file lock |
+| Pengaturan | `~/.config/x-tray/settings.json` | JSON, bisa diedit manual |
+| Log | `~/.local/state/x-tray/x-tray.log` | Dipotong saat melewati 1 MB |
+| Socket IPC | `$XDG_RUNTIME_DIR/x-tray.sock` | Hanya untuk user yang sama |
+| Lock instance | `~/.config/x-tray/instance.lock` | Advisory file lock |
 | Clipboard | memori proses | Tidak ditulis ke disk |
 | Shelf | memori proses | Hilang saat keluar |
 
