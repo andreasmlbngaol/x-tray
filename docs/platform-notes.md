@@ -133,6 +133,8 @@ Wayland native.
 ## Fokus dan fullscreen
 
 - `isAutoRequestFocus = false` mencegah window merebut fokus saat muncul.
+- Klik di luar island terdeteksi lewat `WindowFocusListener`: saat window
+  kehilangan fokus dan state sedang `Expanded`, island langsung mengecil.
 - Auto-hide fullscreen memakai polling 2 detik: `_NET_ACTIVE_WINDOW` di
   root, lalu cek `_NET_WM_STATE_FULLSCREEN` pada window aktif. Polling
   dipilih karena listener X11 event membutuhkan event loop sendiri; bebannya
