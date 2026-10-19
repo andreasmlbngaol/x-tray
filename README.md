@@ -1,29 +1,69 @@
-This is a Kotlin Multiplatform project targeting Desktop (JVM).
+# IslandDesk
 
-* [/shared](./shared/src) is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-    - [commonMain](./shared/src/commonMain/kotlin) is for code that’s common for all targets.
-    - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-      For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-      the [iosMain](./shared/src/iosMain/kotlin) folder would be the right place for such calls.
-      Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./shared/src/jvmMain/kotlin)
-      folder is the appropriate location.
+Desktop Dynamic Island untuk Linux: panel kecil di tengah atas layar yang
+membesar saat dibutuhkan. Dibangun dengan Kotlin Multiplatform + Compose
+Desktop dan Material 3 Expressive.
 
-### Running the apps
+Status: **Fase 1** (kerangka visual dan window). Belum siap dipakai harian.
 
-Use the run configurations provided by the run widget in your IDE's toolbar. You can also use these commands and
-options:
+## Fitur saat ini
 
-- Desktop app:
-    - Hot reload: `./gradlew :desktopApp:hotRun --auto`
-    - Standard run: `./gradlew :desktopApp:run`
+- Window transparan, tanpa dekorasi, selalu di atas, tanpa merebut fokus.
+- Tiga level tampilan: collapsed (jam + baterai), peek (jam + modul aktif),
+  expanded (tab modul + konten).
+- Hover intent 180 ms, perluasan peek ke expanded 600 ms, delay collapse
+  350 ms, tutup dengan Esc atau klik.
+- Modul contoh: Media, Clipboard, Shelf, Quick Controls.
+- Tema Material 3 Expressive dengan font Google Sans Flex.
 
-### Running tests
+Lihat `docs/design-notes.md` untuk keputusan desain dan
+`docs/platform-notes.md` untuk perilaku platform yang sudah diuji.
 
-Use the run button in your IDE's editor gutter, or run tests using Gradle tasks:
+## Kebutuhan
 
-- Desktop tests: `./gradlew :shared:jvmTest`
+- JDK 21
+- Linux dengan X11 atau Wayland (XWayland)
+- Gradle wrapper sudah disertakan
 
----
+## Menjalankan
 
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
+```bash
+./gradlew :app:run
+```
+
+Perintah berguna:
+
+```bash
+./gradlew :core:jvmTest                 # unit test state machine
+./gradlew :ui:compileKotlinJvm          # kompilasi UI
+./gradlew :app:packageDeb               # paket .deb (belum final)
+```
+
+Variabel lingkungan:
+
+| Variabel | Nilai | Keterangan |
+| --- | --- | --- |
+| `ISLANDDESK_RENDER_API` | `SOFTWARE`, `OPENGL` | Paksa backend renderer. Default: SOFTWARE di Wayland, OPENGL di X11. |
+| `ISLANDDESK_DEMO` | `cycle` | Driver sementara untuk menguji transisi tanpa pointer. |
+
+### Catatan renderer
+
+Di Wayland (XWayland), backend OpenGL Skiko menggantung pada window
+transparan. Aplikasi otomatis memakai renderer software di sesi Wayland.
+Detail dan bukti ada di `docs/platform-notes.md`.
+
+## Struktur modul
+
+| Modul | Isi |
+| --- | --- |
+| `core` | State machine island, kontrak `IslandModule`, registry. Murni Kotlin, tanpa UI. |
+| `platform` | `expect/actual`: sesi, geometri layar, jam, kontrol window. |
+| `ui` | Tema Expressive, bentuk island, konten collapsed/peek/expanded, modul demo. |
+| `app` | Entry point, window desktop, driver demo. |
+
+## Lisensi dan aset
+
+- Font **Google Sans Flex** dipakai dengan lisensi SIL Open Font License 1.1
+  (`docs/licenses/google_sans_flex_OFL.txt`).
+- PixelPlayer hanya dipelajari sebagai referensi desain. Kodenya proprietary,
+  jadi tidak ada kode atau aset yang disalin.

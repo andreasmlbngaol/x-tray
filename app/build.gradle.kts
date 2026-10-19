@@ -7,22 +7,22 @@ plugins {
 }
 
 dependencies {
-    implementation(project(":shared"))
+    implementation(project(":core"))
+    implementation(project(":ui"))
+    implementation(project(":platform"))
 
     implementation(compose.desktop.currentOs)
     implementation(libs.kotlinx.coroutinesSwing)
-
-    implementation(libs.compose.uiToolingPreview)
 }
 
 compose.desktop {
     application {
-        mainClass = "id.andreasmlbngaol.d_util.MainKt"
+        mainClass = "id.andreasmlbngaol.islanddesk.app.MainKt"
 
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "id.andreasmlbngaol.d_util"
-            packageVersion = "1.0.0"
+            targetFormats(TargetFormat.Deb)
+            packageName = "islanddesk"
+            packageVersion = "0.1.0"
         }
     }
 }
