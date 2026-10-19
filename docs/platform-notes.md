@@ -132,12 +132,17 @@ kelak ada backend Wayland native.
 - `isAutoRequestFocus = false` mencegah window merebut fokus saat muncul.
 - Klik di luar island terdeteksi lewat `WindowFocusListener`: saat window
   kehilangan fokus dan state sedang `Expanded`, island langsung mengecil.
-- Auto-hide memakai polling 1 detik: `_NET_ACTIVE_WINDOW` di root, lalu
-  cek `_NET_WM_STATE_FULLSCREEN` atau pasangan
+- Deteksi "tertutup" memakai polling 1 detik: `_NET_ACTIVE_WINDOW` di root,
+  lalu cek `_NET_WM_STATE_FULLSCREEN` atau pasangan
   `_NET_WM_STATE_MAXIMIZED_VERT` + `_NET_WM_STATE_MAXIMIZED_HORZ` pada
-  window aktif. Window maximized menaruh tab browser tepat di bawah panel,
-  jadi island ikut menyingkir. Polling dipilih karena listener X11 event
-  membutuhkan event loop sendiri; bebannya satu query ringan per detik.
+  window aktif. Window maximized menaruh tab browser tepat di bawah panel.
+- Saat tertutup island **tidak disembunyikan**, melainkan mengecil ke bentuk
+  dormant 120x6 dp. Menyembunyikan total akan membuat island tidak pernah
+  tampil, karena hampir semua window di desktop Linux dibuka maximized.
+  Bentuk dormant tetap menerima hover (peek) dan klik (expanded), dan input
+  region XShape ikut mengecil sehingga sekitarnya click-through.
+- Polling dipilih karena listener X11 event membutuhkan event loop sendiri;
+  bebannya satu query ringan per detik.
 - Window aktif diabaikan bila `_NET_WM_PID` sama dengan PID IslandDesk,
   supaya mengklik island tidak pernah menyembunyikannya.
 - Visibilitas diterapkan dari loop polling 300 ms, bukan dari
@@ -234,9 +239,16 @@ Island memakai gradien tonal tipis agar tidak terlihat seperti kotak datar.
 - Kecepatan up/down dibaca dari `/sys/class/net/*/statistics/rx_bytes` dan
   `tx_bytes` (kecuali `lo`), lalu dihitung selisihnya per detik. Sampel
   pertama selalu 0 karena belum ada pembanding. Tidak perlu root.
-- Volume memakai `wpctl set-volume @DEFAULT_AUDIO_SINK@ N%`; kecerahan
-  memakai `brightnessctl set N%`. Keduanya dipanggil hanya saat slider
-  dilepas (`onValueChangeFinished`), bukan setiap frame.
+- Volume memakai `wpctl set-volume @DEFAULT_AUDIO_SINK@ N%`. PipeWire
+  mengizinkan nilai di atas 100%; slider memakai rentang 0–150% karena itu
+  batas aman sebelum distorsi parah pada kebanyakan sink.
+- Kecerahan memakai `brightnessctl` bila terpasang. Bila tidak (mis. Zorin
+  tanpa brightnessctl), aplikasi memakai GNOME:
+  `org.gnome.SettingsDaemon.Power.Screen.Brightness` lewat `busctl --user
+  get-property/set-property`. Ini tidak butuh root maupun paket tambahan,
+  tetapi hanya ada saat sesi GNOME berjalan.
+- Keduanya dipanggil hanya saat slider dilepas (`onValueChangeFinished`),
+  bukan setiap frame.
 - Power menu memakai `systemctl poweroff|reboot|suspend`. Konfirmasi
   ditampilkan lebih dulu karena aksi ini tidak bisa dibatalkan.
 

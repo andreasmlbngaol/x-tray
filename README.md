@@ -29,18 +29,20 @@ Desktop dan Material 3 Expressive.
   (tanpa label "On/Off").
 - **Power menu** di header expanded: suspend, reboot, shutdown — dengan
   konfirmasi.
-- **Notifikasi** lewat IPC (`islanddesk notify`) atau tombol "Send a test
-  notification" di Settings; muncul sebagai banner di atas modul aktif dan
-  di baris bawah peek.
-- **Pengaturan** di dalam island: tema System/Light/Dark, lima warna aksen
-  (Navy, Violet, Emerald, Amber, Rose), reduce motion, DND, autostart,
-  hide over maximized, monitor, jeda hover/tutup, dan reset ke default.
+- **Notifikasi** lewat IPC (`islanddesk notify`): saat collapsed seluruh isi
+  island diganti pesan notifikasi, saat peek muncul di baris bawah, dan saat
+  expanded muncul sebagai banner di atas modul aktif.
+- **Pengaturan** di dalam island: tema System/Light/Dark, lima aksen preset
+  plus input HEX kustom, reduce motion, DND, autostart, shrink over
+  maximized, monitor, jeda hover/tutup, About (versi, lisensi, GitHub), dan
+  Danger zone untuk reset ke default.
 - **Drag & drop** file ke island memakai drag-and-drop Compose native.
 - **Window**: transparan, tanpa dekorasi, selalu di atas, tidak muncul di
   taskbar, click-through di luar bentuk island (XShape).
-- **Auto-hide** saat ada window fullscreen atau maximized (bisa dimatikan
-  di Settings). Saat tersembunyi, panggil lewat tray "Show island" atau
-  `islanddesk show`.
+- **Dormant** saat ada window fullscreen atau maximized (bisa dimatikan di
+  Settings): island mengecil jadi garis 120x6 dp di tengah atas, hover
+  membuka peek, klik membuka expanded — jadi tidak menutupi tab browser tapi
+  tetap bisa dipanggil. Sembunyikan total lewat tray atau `islanddesk hide`.
 - **Single instance**, tray icon, autostart XDG, CLI/IPC lewat Unix socket.
 
 ## Kebutuhan
@@ -108,6 +110,8 @@ yang sudah ada, bukan membuat window baru.
 | `ISLANDDESK_DEMO` | `cycle` | Driver sementara untuk menguji transisi tanpa pointer. |
 | `ISLANDDESK_DEBUG` | `1` | Log debug dan stack trace. |
 | `ISLANDDESK_EXEC` | path | Perintah yang ditulis ke entri autostart. |
+| `ISLANDDESK_MODULE` | id modul | Modul yang aktif saat island pertama dibuka. |
+| `ISLANDDESK_SHELF_SEED` | path1,path2 | Isi shelf saat start, untuk menguji drag-out. |
 
 ## Penyimpanan dan privasi
 
