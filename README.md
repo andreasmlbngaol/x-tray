@@ -47,7 +47,8 @@ Desktop dan Material 3 Expressive.
   Settings): island mengecil jadi garis 120x6 dp di tengah atas, hover
   membuka peek, klik membuka expanded — jadi tidak menutupi tab browser tapi
   tetap bisa dipanggil. Klik kanan di island (atau tray / `islanddesk hide`)
-  juga mengecilkannya ke garis yang sama; hover di garis membukanya lagi.
+  juga mengecilkannya ke garis yang sama; hover di garis membukanya lagi, dan
+  setelah itu island kembali ke bar collapsed biasa (tidak terkunci di garis).
 - **Single instance**, tray icon, autostart XDG, CLI/IPC lewat Unix socket.
 
 ## Kebutuhan

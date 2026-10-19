@@ -374,6 +374,10 @@ private fun ApplicationScope.IslandDeskApp() {
                 dormant = hidden || fullscreen || (settings.current.hideOverMaximized && maximized),
                 onStateChange = {
                     islandState = it
+                    // Opening peek or expanded means the island is in use again:
+                    // dropping back to collapsed must show the normal bar, not
+                    // the hairline.
+                    if (it != IslandState.Collapsed) hidden = false
                     Log.i("state=" + it)
                 },
                 onRequestHide = {

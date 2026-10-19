@@ -20,6 +20,7 @@ import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LocalContentColor
@@ -355,7 +356,7 @@ fun IslandDesk(
                         animationSpec = snap(),
                         label = "islandState",
                     ) { current ->
-                        IslandKeyContent(
+                        SizedContent(
                             key = current,
                             services = services,
                             modules = modules,
@@ -376,7 +377,7 @@ fun IslandDesk(
                         },
                         label = "islandState",
                     ) { current ->
-                        IslandKeyContent(
+                        SizedContent(
                             key = current,
                             services = services,
                             modules = modules,
@@ -388,6 +389,41 @@ fun IslandDesk(
                 }
             }
         }
+    }
+}
+
+/**
+ * Measures each state at its own designed size instead of the size the window
+ * is currently animating through. Without this, the outgoing expanded content
+ * (ButtonGroup in Media, fixed-width readouts in collapsed) is measured against
+ * a shrinking box and Compose throws "maxWidth(-6) must be >= minWidth(0)".
+ * Overflow is clipped by the island shape.
+ */
+@Composable
+private fun SizedContent(
+    key: String,
+    services: IslandServices,
+    modules: List<id.andreasmlbngaol.islanddesk.core.IslandModule>,
+    activeModule: id.andreasmlbngaol.islanddesk.core.IslandModule?,
+    dropActive: Boolean,
+    onSelectModule: (String) -> Unit,
+) {
+    val size = when (key) {
+        "dormant" -> IslandDimens.Dormant
+        "notification" -> IslandDimens.Notification
+        "Collapsed" -> IslandDimens.Collapsed
+        "Peek" -> IslandDimens.Peek
+        else -> IslandDimens.Expanded
+    }
+    Box(modifier = Modifier.requiredSize(size.width, size.height)) {
+        IslandKeyContent(
+            key = key,
+            services = services,
+            modules = modules,
+            activeModule = activeModule,
+            dropActive = dropActive,
+            onSelectModule = onSelectModule,
+        )
     }
 }
 
