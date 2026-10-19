@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -248,7 +249,10 @@ fun IslandDesk(
         )
     }
 
-    CompositionLocalProvider(LocalReduceMotion provides reduceMotion) {
+    CompositionLocalProvider(
+        LocalReduceMotion provides reduceMotion,
+        LocalContentColor provides MaterialTheme.colorScheme.onSurface,
+    ) {
         Box(
             modifier = modifier.fillMaxSize(),
             contentAlignment = Alignment.TopCenter,
