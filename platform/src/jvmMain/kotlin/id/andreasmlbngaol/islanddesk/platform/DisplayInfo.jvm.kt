@@ -13,11 +13,20 @@ actual object DisplayInfo {
         return ScreenBounds(bounds.x, bounds.y, bounds.width, bounds.height)
     }
 
-    actual fun usableBounds(): ScreenBounds {
-        val configuration = GraphicsEnvironment
-            .getLocalGraphicsEnvironment()
-            .defaultScreenDevice
-            .defaultConfiguration
+    actual fun screens(): List<ScreenBounds> =
+        GraphicsEnvironment.getLocalGraphicsEnvironment()
+            .screenDevices
+            .map { device ->
+                val bounds = device.defaultConfiguration.bounds
+                ScreenBounds(bounds.x, bounds.y, bounds.width, bounds.height)
+            }
+
+    actual fun usableBounds(monitorIndex: Int): ScreenBounds {
+        val environment = GraphicsEnvironment.getLocalGraphicsEnvironment()
+        val devices = environment.screenDevices
+        if (devices.isEmpty()) return ScreenBounds(0, 0, 0, 0)
+        val device = devices[monitorIndex.coerceIn(0, devices.lastIndex)]
+        val configuration = device.defaultConfiguration
         val bounds = configuration.bounds
         val insets = Toolkit.getDefaultToolkit().getScreenInsets(configuration)
         return ScreenBounds(
@@ -28,8 +37,13 @@ actual object DisplayInfo {
         )
     }
 
-    actual fun topCenterPosition(width: Int, height: Int, topMargin: Int): ScreenPoint {
-        val usable = usableBounds()
+    actual fun topCenterPosition(
+        width: Int,
+        height: Int,
+        topMargin: Int,
+        monitorIndex: Int,
+    ): ScreenPoint {
+        val usable = usableBounds(monitorIndex)
         return ScreenPoint(
             x = usable.x + (usable.width - width) / 2,
             y = usable.y + topMargin,

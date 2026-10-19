@@ -15,6 +15,12 @@ data class ScreenPoint(val x: Int, val y: Int)
  */
 expect object DisplayInfo {
     fun primaryBounds(): ScreenBounds
-    fun usableBounds(): ScreenBounds
-    fun topCenterPosition(width: Int, height: Int, topMargin: Int = 0): ScreenPoint
+    fun screens(): List<ScreenBounds>
+    fun usableBounds(monitorIndex: Int = 0): ScreenBounds
+    fun topCenterPosition(
+        width: Int,
+        height: Int,
+        topMargin: Int = 0,
+        monitorIndex: Int = 0,
+    ): ScreenPoint
 }
