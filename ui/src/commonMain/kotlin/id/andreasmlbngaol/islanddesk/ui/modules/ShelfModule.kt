@@ -73,12 +73,14 @@ class ShelfModule(private val services: IslandServices) : IslandModule {
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Folder,
-                        contentDescription = null,
-                        modifier = Modifier.size(32.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    ShapeAccent(size = 78.dp) {
+                        Icon(
+                            imageVector = Icons.Rounded.Folder,
+                            contentDescription = null,
+                            modifier = Modifier.size(30.dp),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    }
                     Text(
                         text = "Drop files onto the island",
                         style = MaterialTheme.typography.bodyMedium,

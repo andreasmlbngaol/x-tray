@@ -1,5 +1,6 @@
 package id.andreasmlbngaol.islanddesk.ui.modules
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,16 +18,20 @@ import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
+import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.IconButtonShapes
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -131,7 +136,11 @@ class MediaModule(private val services: IslandServices) : IslandModule {
                     }
                     FilledIconButton(
                         onClick = { command { services.media.playPause() } },
-                        modifier = Modifier.size(46.dp),
+                        shapes = IconButtonShapes(
+                            shape = RoundedCornerShape(50),
+                            pressedShape = RoundedCornerShape(14.dp),
+                        ),
+                        modifier = Modifier.size(48.dp),
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -175,28 +184,47 @@ class MediaModule(private val services: IslandServices) : IslandModule {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    Surface(
-                        shape = RoundedCornerShape(50),
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    val previousSource = remember { MutableInteractionSource() }
+                    val nextSource = remember { MutableInteractionSource() }
+                    ButtonGroup(
+                        overflowIndicator = {},
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        Row {
-                            TransportButton(
-                                icon = Icons.Rounded.SkipPrevious,
-                                description = "Previous",
-                                onClick = { command { services.media.previous() } },
-                            )
-                            TransportButton(
-                                icon = Icons.Rounded.SkipNext,
-                                description = "Next",
-                                onClick = { command { services.media.next() } },
-                            )
-                        }
+                        customItem(
+                            buttonGroupContent = {
+                                TransportButton(
+                                    icon = Icons.Rounded.SkipPrevious,
+                                    description = "Previous",
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .animateWidth(previousSource),
+                                    interactionSource = previousSource,
+                                    onClick = { command { services.media.previous() } },
+                                )
+                            },
+                            menuContent = {},
+                        )
+                        customItem(
+                            buttonGroupContent = {
+                                TransportButton(
+                                    icon = Icons.Rounded.SkipNext,
+                                    description = "Next",
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .animateWidth(nextSource),
+                                    interactionSource = nextSource,
+                                    onClick = { command { services.media.next() } },
+                                )
+                            },
+                            menuContent = {},
+                        )
                     }
-                    Spacer(Modifier.weight(1f))
                     Text(
                         text = track.player,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
                     )
                 }
             }
@@ -218,12 +246,14 @@ private fun EmptyMedia() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Icon(
-                imageVector = Icons.Rounded.MusicOff,
-                contentDescription = null,
-                modifier = Modifier.size(30.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            ShapeAccent(size = 74.dp) {
+                Icon(
+                    imageVector = Icons.Rounded.MusicOff,
+                    contentDescription = null,
+                    modifier = Modifier.size(28.dp),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
             Text(
                 text = "No media playing",
                 style = MaterialTheme.typography.titleSmall,
@@ -242,13 +272,23 @@ private fun TransportButton(
     icon: ImageVector,
     description: String,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    interactionSource: MutableInteractionSource? = null,
 ) {
-    IconButton(onClick = onClick) {
+    FilledTonalIconButton(
+        onClick = onClick,
+        modifier = modifier.height(44.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = IconButtonDefaults.filledTonalIconButtonColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+        ),
+        interactionSource = interactionSource,
+    ) {
         Icon(
             imageVector = icon,
             contentDescription = description,
-            modifier = Modifier.size(22.dp),
-            tint = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.size(20.dp),
         )
     }
 }

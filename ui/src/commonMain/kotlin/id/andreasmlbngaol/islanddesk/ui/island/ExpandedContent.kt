@@ -1,7 +1,8 @@
 package id.andreasmlbngaol.islanddesk.ui.island
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,9 +24,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -130,18 +133,27 @@ private fun ModuleRail(
         modules.forEach { module ->
             val selected = module.id == activeModuleId
             val shape = RoundedCornerShape(18.dp)
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(58.dp)
-                    .clip(shape)
-                    .clickable { onSelectModule(module.id) },
-                shape = shape,
-                color = if (selected) {
+            val iconScale by animateFloatAsState(
+                targetValue = if (selected) 1.08f else 0.92f,
+                animationSpec = MaterialTheme.motionScheme.slowSpatialSpec(),
+                label = "railIconScale",
+            )
+            val container by animateColorAsState(
+                targetValue = if (selected) {
                     MaterialTheme.colorScheme.secondaryContainer
                 } else {
-                    MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.0f)
+                    Color.Transparent
                 },
+                animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
+                label = "railSelection",
+            )
+            Surface(
+                onClick = { onSelectModule(module.id) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(58.dp),
+                shape = shape,
+                color = container,
                 contentColor = if (selected) {
                     MaterialTheme.colorScheme.onSecondaryContainer
                 } else {
@@ -156,7 +168,12 @@ private fun ModuleRail(
                     Icon(
                         imageVector = module.icon,
                         contentDescription = module.title,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier
+                            .size(20.dp)
+                            .graphicsLayer {
+                                scaleX = iconScale
+                                scaleY = iconScale
+                            },
                     )
                     Spacer(Modifier.height(3.dp))
                     Text(

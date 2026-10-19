@@ -275,6 +275,22 @@ Untuk desktop, nilai 42–48 dp dipertahankan sebagai **target klik**, tetapi ti
 
 Catatan: angka "35/8/4" adalah jumlah kemunculan teks API di source, bukan jumlah instance runtime.
 
+#### 4.8.1 Implementasi aktual di IslandDesk
+
+| API | Lokasi | Alasan |
+|---|---|---|
+| `MaterialExpressiveTheme` + `MotionScheme.expressive()` | `theme/Theme.kt` | Sumber semua spec motion dan token expressive |
+| `ToggleButton` + `ToggleButtonSize.Medium` | `ControlsModule` | Tile quick settings; kontainer bermorfosis saat ditekan dan berubah ke `primaryContainer` saat aktif |
+| `ButtonGroup` + `customItem` + `Modifier.animateWidth` | `MediaModule` | Tombol previous/next saling menekan (squish) saat salah satu ditekan |
+| `IconButtonShapes` (pill → 14 dp) | `MediaModule` play/pause | Morph bentuk saat ditekan, bukan sekadar ripple |
+| `MaterialShapes` + `RoundedPolygon.toShape()` | `Expressive.kt` → empty state Media/Shelf | Siluet organik sebagai latar ikon, menghindari rounded-rect biasa |
+| `LinearWavyProgressIndicator` | Peek, kartu media, focus timer | Progres media dan sesi fokus |
+| Tipografi `*Emphasized` | Jam peek, judul media, nilai tile, angka fokus | Hierarki angka/teks utama |
+| `FilterChip` | `SettingsModule` tema System/Light/Dark | Pemilihan eksklusif ringkas |
+| `animateColorAsState` + `slowSpatialSpec` | Rail modul | Seleksi rail beranimasi, ikon membesar 1.08× |
+
+Prinsipnya: expressive dipakai pada **titik interaksi** (tekan, pilih, buka), bukan sebagai dekorasi di seluruh permukaan. Permukaan besar tetap memakai spring terkontrol agar tidak memantul berlebihan.
+
 ### 4.9 Pola yang layak diadopsi dan yang perlu dihindari
 
 **Diadopsi:**
