@@ -329,8 +329,8 @@ Catatan: angka "35/8/4" adalah jumlah kemunculan teks API di source, bukan jumla
 | State | Lebar | Tinggi | Padding | Radius | Catatan |
 |---|---|---|---|---|---|
 | Collapsed | 152–200 dp (konten) | 36 dp | 12–14 dp horizontal | 18 dp | jam + baterai; window hit 48 dp |
-| Peek | 380 dp | 100 dp | 16 dp | 28 dp | jam/tanggal, media mini, status, event |
-| Expanded | 440 dp (380–520) | konten, maks 600 dp | 20 dp | 32 dp | tab + modul + footer |
+| Peek | 420 dp | 140 dp | 16 dp | 34 dp | jam HH/MM/ss, now playing, baterai, notifikasi |
+| Expanded | 460 dp | 620 dp | 16 dp | 34 dp | rail modul + konten (tanpa footer) |
 | Tab menempel | sama | sama | sama | atas 0, bawah 32 dp, fillet 10 dp | default layar tanpa notch |
 
 Angka ini adalah titik awal, bukan final. Akan divalidasi di Fase 1 pada layar 1080p/1440p dan skala fractional GNOME.
@@ -510,7 +510,7 @@ Row(gap 12dp)
 ## 6. Keputusan yang perlu persetujuan sebelum Fase 1
 
 1. **Nama dan package.** Tetap `IslandDesk`? Ganti package `id.andreasmlbngaol.d_util` sekarang atau nanti? Rename setelah Fase 1 lebih mahal.
-2. **Ukuran panel.** Setujui draft 200×36 / 380×100 / 440×600, atau beri preferensi lebih kecil/besar.
+2. **Ukuran panel.** Final: 220×38 / 420×140 / 460×620 (disesuaikan setelah revisi pengguna).
 3. **Gaya default.** "Tab menempel" untuk layar tanpa notch, sesuai brief. Konfirmasi bahwa ini default.
 4. **Font.** Font sistem + tabular numerals untuk Fase 1, atau langsung bundel font OFL rounded (mis. Figtree/Manrope). Jangan memakai Google Sans dari PixelPlayer.
 5. **Seed color default.** Baseline M3 `#6750A4`, atau warna lain (mis. indigo kebiruan `#5B5BD6`).

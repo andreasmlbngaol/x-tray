@@ -6,20 +6,24 @@ Desktop dan Material 3 Expressive.
 
 ## Fitur
 
-- **Tiga level**: collapsed (jam + baterai), peek (jam + modul aktif),
-  expanded (tab modul + konten).
-- **Hover intent** 180 ms, perluasan 600 ms, delay tutup 350 ms, Esc/klik
-  untuk menutup. Semua dapat diatur.
+- **Tiga level**: collapsed (jam, tanggal, baterai), peek (jam bertumpuk
+  HH/MM/ss, media yang diputar, baterai, notifikasi terbaru), expanded
+  (rail modul + konten).
+- **Interaksi**: hover membuka peek, kursor keluar menutup peek, klik
+  membuka expanded. Expanded hanya menutup lewat Esc, klik di luar, atau
+  pindah window — bukan saat kursor keluar.
 - **Media (MPRIS)** lewat `busctl`: judul, artis, album, progres, dan
   kontrol putar/jeda/berikutnya/sebelumnya.
 - **Clipboard**: riwayat teks di memori, klik untuk menyalin ulang, bisa
   dijeda.
 - **Shelf**: tarik file ke island, buka atau hapus dari panel.
-- **Fokus**: timer countdown yang tampil juga di peek.
+- **Fokus**: timer countdown dengan durasi kustom jam/menit/detik,
+  tampil juga di peek.
 - **Kontrol sistem**: volume, mute, mic, kecerahan, Wi-Fi, Bluetooth, DND.
 - **Notifikasi** lewat IPC (`islanddesk notify`).
-- **Pengaturan** di dalam island: reduce motion, DND, autostart, monitor,
-  jeda hover/tutup.
+- **Pengaturan** di dalam island: tema System/Light/Dark, reduce motion,
+  DND, autostart, monitor, jeda hover/tutup.
+- **Drag & drop** file ke island memakai drag-and-drop Compose native.
 - **Window**: transparan, tanpa dekorasi, selalu di atas, tidak muncul di
   taskbar, click-through di luar bentuk island (XShape).
 - **Auto-hide** saat ada window fullscreen.

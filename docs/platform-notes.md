@@ -44,8 +44,8 @@ ikut berubah agar area tangkapan pointer tetap sekecil mungkin:
 | State | Ukuran visual | Ukuran window (termasuk padding 12 dp) |
 | --- | --- | --- |
 | Collapsed | 200x36 | 224x48 |
-| Peek | 380x100 | 404x112 |
-| Expanded | 440x600 | 464x612 |
+| Peek | 420x140 | 444x152 |
+| Expanded | 460x620 | 484x632 |
 
 ## Temuan penting: OpenGL + window transparan menggantung di XWayland
 
@@ -95,9 +95,11 @@ dipakai kembali.
 - `xdotool mousemove` lewat XTest **tidak** diandalkan untuk memicu hover di
   permukaan XWayland; event dapat tidak sampai ke window Compose.
 - Namun hover dengan kursor fisik **bekerja**: saat kursor berada di atas
-  island, state berubah `Collapsed -> Peek` setelah hover intent 180 ms
-  (terlihat di log `state=Peek`).
-- Klik juga diterima window (window fokus, `focusable = true`).
+  island, state berubah `Collapsed -> Peek` setelah hover intent 180 ms.
+- Perilaku final: peek tidak pernah membuka expanded sendiri; klik yang
+  membuka expanded. Kursor keluar dari peek menutup peek; expanded
+  mengabaikan gerakan kursor dan hanya menutup lewat Esc, klik di luar
+  (focus lost), atau perintah IPC.
 
 Implikasi untuk pengujian otomatis: jangan bergantung pada injeksi pointer
 X11. Gunakan `ISLANDDESK_DEMO=cycle` (driver sementara) atau nanti IPC
@@ -120,15 +122,10 @@ Compose (mis. `runDesktopComposeUiTest`) yang tidak membutuhkan compositor.
 
 ## Click-through
 
-Belum diterapkan. Saat ini seluruh persegi window menangkap klik, termasuk
-padding transparan 12 dp dan area di sekitar bentuk island. Artinya klik pada
-area tersebut tidak tembus ke aplikasi di bawahnya.
-
-Rencana Fase 2: bentuk ulang input region dengan XShape lewat JNA
-(`XShapeCombineRectangles`) mengikuti `IslandShape`, sehingga hanya bentuk
-yang terlihat yang menerima input. Di Wayland native, XShape hanya berlaku
-pada permukaan XWayland; perlu strategi terpisah bila kelak ada backend
-Wayland native.
+Diterapkan dengan XShape (detail di bagian berikut). Padding transparan dan
+area di luar bentuk island tidak lagi menangkap klik. Di Wayland native,
+XShape hanya berlaku pada permukaan XWayland; perlu strategi terpisah bila
+kelak ada backend Wayland native.
 
 ## Fokus dan fullscreen
 
@@ -191,6 +188,23 @@ $ islanddesk state      -> Expanded
 $ islanddesk notify ... -> ok
 $ islanddesk quit       -> ok
 ```
+
+## Drag and drop
+
+Shelf memakai `Modifier.dragAndDropTarget` dari Compose
+(`androidx.compose.foundation.draganddrop`), bukan `java.awt.dnd.DropTarget`.
+AWT `DropTarget` pada ComposeWindow bertabrakan dengan drag manager Compose,
+sehingga drop tidak pernah sampai ke listener. Dengan modifier Compose,
+`XdndAware` dipasang otomatis dan `DragData.FilesList` memberi path file.
+
+Verifikasi: `xprop` menunjukkan `XdndAware(ATOM) = BITMAP` pada window.
+
+## Tema
+
+`themeMode` di `settings.json` bernilai `System`, `Light`, atau `Dark`.
+`System` memakai `isSystemInDarkTheme()` dari Compose Desktop. Skema warna
+terang dan gelap sudah didefinisikan di `ui/theme/Color.kt`; island memakai
+gradien tonal tipis agar tidak terlihat seperti kotak datar.
 
 ## Tray dan autostart
 
