@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -26,38 +27,61 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import id.andreasmlbngaol.islanddesk.core.IslandConfig
 import id.andreasmlbngaol.islanddesk.core.IslandState
 import id.andreasmlbngaol.islanddesk.core.IslandStateMachine
-import id.andreasmlbngaol.islanddesk.core.ModuleRegistry
+import id.andreasmlbngaol.islanddesk.core.IslandStateRequest
+import id.andreasmlbngaol.islanddesk.core.geometry.IslandGeometry
+import id.andreasmlbngaol.islanddesk.ui.modules.ModuleCatalog
+import id.andreasmlbngaol.islanddesk.ui.services.IslandServices
 import id.andreasmlbngaol.islanddesk.ui.theme.LocalReduceMotion
 import kotlinx.coroutines.delay
 
 /**
  * The island itself: a single morphing surface with three disclosure levels.
  *
- * The host (desktop window) only needs to react to [onStateChange] so it can
- * keep the native window tight around the visual. Pointer intent, timers and
- * keyboard dismissal live here.
+ * All system access is injected through [services]; the host only needs to
+ * react to [onStateChange] (window resize) and [onGeometryChanged] (input
+ * region shaping).
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun IslandDesk(
-    registry: ModuleRegistry,
+    services: IslandServices,
     modifier: Modifier = Modifier,
-    config: IslandConfig = IslandConfig(),
-    collapseSignal: Int = 0,
-    activateSignal: Int = 0,
+    stateRequest: IslandStateRequest? = null,
     onStateChange: (IslandState) -> Unit = {},
+    onGeometryChanged: (IslandGeometry) -> Unit = {},
 ) {
-    val machine = remember(config) { IslandStateMachine(config) }
+    val settings = services.settings.current
+    val config = remember(settings.hoverIntentMs, settings.peekToExpandedMs, settings.collapseDelayMs) {
+        IslandConfig.from(settings)
+    }
+    val machine = remember { IslandStateMachine(config) }
+    LaunchedEffect(config) { machine.config = config }
     var state by remember { mutableStateOf(machine.state) }
     var hoverEpoch by remember { mutableIntStateOf(0) }
-    var activeModuleId by remember { mutableStateOf(registry.first()?.id) }
+    var activeModuleId by remember { mutableStateOf<String?>(null) }
 
-    val activeModule = registry.modules.firstOrNull { it.id == activeModuleId } ?: registry.first()
+    val allModules = remember(services) { ModuleCatalog.create(services) }
+    val modules = remember(
+        allModules,
+        settings.mediaEnabled,
+        settings.clipboardEnabled,
+        settings.shelfEnabled,
+        settings.controlsEnabled,
+    ) { ModuleCatalog.filter(allModules, settings) }
+    val activeModule = modules.firstOrNull { it.id == activeModuleId } ?: modules.firstOrNull()
+
+    LaunchedEffect(modules) {
+        if (modules.none { it.id == activeModuleId }) {
+            activeModuleId = modules.firstOrNull()?.id
+        }
+    }
+
     val interactionSource = remember { MutableInteractionSource() }
     val isHovered by interactionSource.collectIsHoveredAsState()
 
@@ -70,27 +94,29 @@ fun IslandDesk(
         onStateChange(state)
     }
 
-    LaunchedEffect(collapseSignal) {
-        if (collapseSignal > 0) {
-            machine.onDismiss()
-            publish()
-            hoverEpoch++
+    LaunchedEffect(stateRequest?.id) {
+        val request = stateRequest ?: return@LaunchedEffect
+        when (request.target) {
+            IslandState.Collapsed -> machine.onDismiss()
+            IslandState.Expanded -> machine.onActivate()
+            IslandState.Peek -> machine.onActivate()
         }
+        publish()
+        hoverEpoch++
     }
 
-    LaunchedEffect(activateSignal) {
-        if (activateSignal > 0) {
-            machine.onActivate()
+    LaunchedEffect(settings.doNotDisturb) {
+        if (settings.doNotDisturb) {
+            machine.onDismiss()
             publish()
-            hoverEpoch++
         }
     }
 
     LaunchedEffect(isHovered) {
-        val now = System.nanoTime() / 1_000_000L
-        if (isHovered) {
+        val now = System.currentTimeMillis()
+        if (isHovered && !services.settings.current.doNotDisturb) {
             machine.onPointerEnter(now)
-        } else {
+        } else if (!isHovered) {
             machine.onPointerExit(now)
         }
         publish()
@@ -99,9 +125,9 @@ fun IslandDesk(
 
     LaunchedEffect(state, hoverEpoch) {
         while (true) {
-            if (!machine.isTransitionPending(System.nanoTime() / 1_000_000L)) break
+            if (!machine.isTransitionPending(System.currentTimeMillis())) break
             delay(16L)
-            machine.onTick(System.nanoTime() / 1_000_000L)
+            machine.onTick(System.currentTimeMillis())
             if (machine.state != state) {
                 publish()
             }
@@ -110,7 +136,7 @@ fun IslandDesk(
 
     val target = IslandDimens.forState(state)
     val motion = MaterialTheme.motionScheme
-    val reduceMotion = LocalReduceMotion.current
+    val reduceMotion = LocalReduceMotion.current || settings.reduceMotion
     val spatialSpec = remember(motion, state, reduceMotion) {
         when {
             reduceMotion -> snap<Dp>()
@@ -144,48 +170,71 @@ fun IslandDesk(
         IslandShape(bottomRadius = bottomRadius, filletRadius = filletRadius)
     }
 
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.TopCenter,
-    ) {
+    val density = LocalDensity.current
+    LaunchedEffect(state) {
+        val size = IslandDimens.forState(state)
+        val windowWidth = with(density) { IslandDimens.windowWidth(size).roundToPx() }
+        val windowHeight = with(density) { IslandDimens.windowHeight(size).roundToPx() }
+        onGeometryChanged(
+            IslandGeometry(
+                windowWidthPx = windowWidth,
+                windowHeightPx = windowHeight,
+                islandWidthPx = with(density) { size.width.roundToPx() },
+                islandHeightPx = with(density) { size.height.roundToPx() },
+                bottomRadiusPx = with(density) { size.bottomRadius.toPx() },
+                paddingPx = with(density) { IslandDimens.WindowHorizontalPadding.roundToPx() },
+            )
+        )
+    }
+
+    CompositionLocalProvider(LocalReduceMotion provides reduceMotion) {
         Box(
-            modifier = Modifier
-                .width(width)
-                .height(height)
-                .shadow(
-                    elevation = if (state == IslandState.Collapsed) 6.dp else 16.dp,
-                    shape = shape,
-                    clip = false,
-                )
-                .clip(shape)
-                .background(MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.98f))
-                .border(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
-                    shape = shape,
-                )
-                .clickable(
-                    interactionSource = interactionSource,
-                    indication = null,
-                ) {
-                    machine.onActivate()
-                    publish()
-                    hoverEpoch++
-                },
+            modifier = modifier.fillMaxSize(),
+            contentAlignment = Alignment.TopCenter,
         ) {
-            Crossfade(
-                targetState = state,
-                animationSpec = tween(160),
-                label = "islandState",
-            ) { current ->
-                when (current) {
-                    IslandState.Collapsed -> CollapsedContent()
-                    IslandState.Peek -> PeekContent(activeModule = activeModule)
-                    IslandState.Expanded -> ExpandedContent(
-                        modules = registry.modules,
-                        activeModule = activeModule,
-                        onSelectModule = { activeModuleId = it },
+            Box(
+                modifier = Modifier
+                    .width(width)
+                    .height(height)
+                    .shadow(
+                        elevation = if (state == IslandState.Collapsed) 6.dp else 16.dp,
+                        shape = shape,
+                        clip = false,
                     )
+                    .clip(shape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.98f))
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                        shape = shape,
+                    )
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                    ) {
+                        machine.onActivate()
+                        publish()
+                        hoverEpoch++
+                    },
+            ) {
+                Crossfade(
+                    targetState = state,
+                    animationSpec = if (reduceMotion) snap() else tween(160),
+                    label = "islandState",
+                ) { current ->
+                    when (current) {
+                        IslandState.Collapsed -> CollapsedContent(services = services)
+                        IslandState.Peek -> PeekContent(
+                            activeModule = activeModule,
+                            services = services,
+                        )
+                        IslandState.Expanded -> ExpandedContent(
+                            modules = modules,
+                            activeModule = activeModule,
+                            onSelectModule = { activeModuleId = it },
+                            services = services,
+                        )
+                    }
                 }
             }
         }

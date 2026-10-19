@@ -1,6 +1,7 @@
 package id.andreasmlbngaol.islanddesk.ui.island
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +13,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Settings
@@ -28,15 +31,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import id.andreasmlbngaol.islanddesk.core.IslandModule
+import id.andreasmlbngaol.islanddesk.ui.services.IslandServices
 
 @Composable
 fun ExpandedContent(
     modules: List<IslandModule>,
     activeModule: IslandModule?,
     onSelectModule: (String) -> Unit,
+    services: IslandServices,
     modifier: Modifier = Modifier,
 ) {
     val clock = rememberClockText()
+    val notification = services.notifications.current
     Column(modifier = modifier.fillMaxSize()) {
         Row(
             modifier = Modifier
@@ -56,7 +62,7 @@ fun ExpandedContent(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.weight(1f))
-            IconButton(onClick = {}) {
+            IconButton(onClick = { onSelectModule("settings") }) {
                 Icon(
                     imageVector = Icons.Rounded.Settings,
                     contentDescription = "Pengaturan",
@@ -80,14 +86,25 @@ fun ExpandedContent(
                 .fillMaxWidth()
                 .padding(16.dp),
         ) {
-            if (activeModule != null) {
-                activeModule.ExpandedContent()
-            } else {
-                Text(
-                    text = "Belum ada modul. Tambahkan implementasi IslandModule.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            Column(modifier = Modifier.fillMaxSize()) {
+                if (notification != null) {
+                    NotificationBanner(
+                        notification = notification,
+                        onDismiss = { services.notifications.dismiss() },
+                        modifier = Modifier.padding(bottom = 12.dp),
+                    )
+                }
+                Box(modifier = Modifier.weight(1f)) {
+                    if (activeModule != null) {
+                        activeModule.ExpandedContent()
+                    } else {
+                        Text(
+                            text = "Belum ada modul.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
             }
         }
 
@@ -123,6 +140,7 @@ private fun ModuleTabRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
             .padding(horizontal = 12.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -131,7 +149,7 @@ private fun ModuleTabRow(
             val shape = RoundedCornerShape(50)
             Surface(
                 modifier = Modifier
-                    .weight(1f)
+                    .widthIn(min = 84.dp)
                     .height(38.dp)
                     .clip(shape)
                     .clickable { onSelectModule(module.id) },
@@ -148,7 +166,9 @@ private fun ModuleTabRow(
                 },
             ) {
                 Row(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 10.dp),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
