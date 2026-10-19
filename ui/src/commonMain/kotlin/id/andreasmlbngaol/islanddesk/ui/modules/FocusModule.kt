@@ -48,9 +48,15 @@ class FocusModule(private val services: IslandServices) : IslandModule {
         val activity = services.activity.current
         var tick by remember { mutableIntStateOf(0) }
         LaunchedEffect(activity?.id) {
+            var notified = false
             while (services.activity.current != null) {
                 delay(1_000L)
                 tick++
+                if (!notified && services.activity.isFinished()) {
+                    notified = true
+                    services.notifications.push("Sesi fokus selesai")
+                    break
+                }
             }
         }
         if (activity == null) {

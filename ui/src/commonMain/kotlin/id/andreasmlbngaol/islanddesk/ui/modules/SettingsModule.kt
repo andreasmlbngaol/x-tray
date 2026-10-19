@@ -23,6 +23,10 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -119,25 +123,34 @@ class SettingsModule(private val services: IslandServices) : IslandModule {
             }
 
             SettingsCard {
+                var hoverDraft by remember(settings.hoverIntentMs) {
+                    mutableFloatStateOf(settings.hoverIntentMs.toFloat())
+                }
                 Text(
-                    "Jeda hover: " + settings.hoverIntentMs + " ms",
+                    "Jeda hover: " + hoverDraft.toInt() + " ms",
                     style = MaterialTheme.typography.labelMedium,
                 )
                 Slider(
-                    value = settings.hoverIntentMs.toFloat(),
-                    onValueChange = { value ->
-                        services.settings.update { it.copy(hoverIntentMs = value.toLong()) }
+                    value = hoverDraft,
+                    onValueChange = { value -> hoverDraft = value },
+                    onValueChangeFinished = {
+                        services.settings.update { it.copy(hoverIntentMs = hoverDraft.toLong()) }
                     },
                     valueRange = 50f..600f,
                 )
+
+                var collapseDraft by remember(settings.collapseDelayMs) {
+                    mutableFloatStateOf(settings.collapseDelayMs.toFloat())
+                }
                 Text(
-                    "Jeda tutup: " + settings.collapseDelayMs + " ms",
+                    "Jeda tutup: " + collapseDraft.toInt() + " ms",
                     style = MaterialTheme.typography.labelMedium,
                 )
                 Slider(
-                    value = settings.collapseDelayMs.toFloat(),
-                    onValueChange = { value ->
-                        services.settings.update { it.copy(collapseDelayMs = value.toLong()) }
+                    value = collapseDraft,
+                    onValueChange = { value -> collapseDraft = value },
+                    onValueChangeFinished = {
+                        services.settings.update { it.copy(collapseDelayMs = collapseDraft.toLong()) }
                     },
                     valueRange = 0f..1_500f,
                 )

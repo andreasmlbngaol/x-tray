@@ -73,12 +73,20 @@ fun IslandDesk(
         settings.clipboardEnabled,
         settings.shelfEnabled,
         settings.controlsEnabled,
-    ) { ModuleCatalog.filter(allModules, settings) }
+    ) { ModuleCatalog.filter(allModules, settings).sortedByDescending { it.priority } }
     val activeModule = modules.firstOrNull { it.id == activeModuleId } ?: modules.firstOrNull()
 
     LaunchedEffect(modules) {
         if (modules.none { it.id == activeModuleId }) {
             activeModuleId = modules.firstOrNull()?.id
+        }
+    }
+
+    LaunchedEffect(state, activeModule?.id) {
+        if (state == IslandState.Collapsed) {
+            allModules.forEach { it.onHidden() }
+        } else {
+            activeModule?.onShown()
         }
     }
 

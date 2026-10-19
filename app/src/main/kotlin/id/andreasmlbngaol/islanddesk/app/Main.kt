@@ -155,7 +155,7 @@ private fun ApplicationScope.IslandDeskApp() {
     DisposableEffect(Unit) {
         services.clipboard.start { text ->
             SwingUtilities.invokeLater {
-                if (!services.clipboardPaused) {
+                if (services.settings.current.clipboardEnabled && !services.clipboardPaused) {
                     services.clipboardHistory.add(text, System.currentTimeMillis())
                     services.bump()
                 }
@@ -236,6 +236,14 @@ private fun ApplicationScope.IslandDeskApp() {
     ) {
         LaunchedEffect(Unit) {
             window.isAutoRequestFocus = false
+            window.addWindowFocusListener(object : java.awt.event.WindowFocusListener {
+                override fun windowGainedFocus(event: java.awt.event.WindowEvent?) = Unit
+                override fun windowLostFocus(event: java.awt.event.WindowEvent?) {
+                    if (islandState == IslandState.Expanded) {
+                        requestState(IslandState.Collapsed)
+                    }
+                }
+            })
             repeat(6) {
                 delay(250L)
                 X11Window.applyEwmhHints()
