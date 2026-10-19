@@ -17,14 +17,23 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.PowerSettingsNew
+import androidx.compose.material.icons.rounded.RestartAlt
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -65,14 +74,7 @@ fun ExpandedContent(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.weight(1f))
-            IconButton(onClick = { onSelectModule("settings") }) {
-                Icon(
-                    imageVector = Icons.Rounded.Settings,
-                    contentDescription = "Settings",
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            PowerMenu(services = services)
         }
 
         Row(modifier = Modifier.fillMaxSize()) {
@@ -114,6 +116,91 @@ fun ExpandedContent(
             }
         }
     }
+}
+
+
+@Composable
+private fun PowerMenu(services: IslandServices) {
+    var expanded by remember { mutableStateOf(false) }
+    var pending by remember { mutableStateOf<PowerAction?>(null) }
+
+    Box {
+        IconButton(onClick = { expanded = true }) {
+            Icon(
+                imageVector = Icons.Rounded.PowerSettingsNew,
+                contentDescription = "Power",
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            PowerAction.entries.forEach { action ->
+                DropdownMenuItem(
+                    text = { Text(action.label) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = action.icon,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    },
+                    enabled = services.power.available,
+                    onClick = {
+                        expanded = false
+                        pending = action
+                    },
+                )
+            }
+        }
+    }
+
+    val action = pending
+    if (action != null) {
+        AlertDialog(
+            onDismissRequest = { pending = null },
+            title = { Text(action.label + "?") },
+            text = { Text(action.question) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        when (action) {
+                            PowerAction.Suspend -> services.power.suspend()
+                            PowerAction.Reboot -> services.power.reboot()
+                            PowerAction.Shutdown -> services.power.shutdown()
+                        }
+                        pending = null
+                    },
+                ) {
+                    Text(action.label)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pending = null }) { Text("Cancel") }
+            },
+        )
+    }
+}
+
+private enum class PowerAction(
+    val label: String,
+    val question: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+) {
+    Suspend(
+        label = "Suspend",
+        question = "Suspend the session? The island resumes when you unlock.",
+        icon = Icons.Rounded.Bedtime,
+    ),
+    Reboot(
+        label = "Reboot",
+        question = "Restart the computer? Unsaved work will be lost.",
+        icon = Icons.Rounded.RestartAlt,
+    ),
+    Shutdown(
+        label = "Shut down",
+        question = "Power off the computer? Unsaved work will be lost.",
+        icon = Icons.Rounded.PowerSettingsNew,
+    ),
 }
 
 @Composable

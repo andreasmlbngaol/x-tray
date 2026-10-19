@@ -8,6 +8,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import id.andreasmlbngaol.islanddesk.platform.ClockText
@@ -47,6 +48,14 @@ fun PeekClock(clock: ClockText, modifier: Modifier = Modifier) {
                 fontFeatureSettings = "tnum",
             ),
             color = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(Modifier.height(3.dp))
+        Text(
+            text = clock.date,
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, lineHeight = 10.sp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }

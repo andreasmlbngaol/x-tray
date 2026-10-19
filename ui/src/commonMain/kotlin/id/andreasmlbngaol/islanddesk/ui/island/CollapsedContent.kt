@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BatteryChargingFull
@@ -23,7 +24,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import id.andreasmlbngaol.islanddesk.ui.services.IslandServices
+import kotlin.math.roundToInt
 
 @Composable
 fun CollapsedContent(
@@ -33,6 +36,7 @@ fun CollapsedContent(
     val clock = rememberClockText()
     val battery = services.batteryState
     val dnd = services.settings.current.doNotDisturb
+    val speed = services.networkSpeed
     Row(
         modifier = modifier
             .fillMaxSize()
@@ -48,15 +52,17 @@ fun CollapsedContent(
                 text = clock.time,
                 style = MaterialTheme.typography.titleMediumEmphasized.copy(fontFeatureSettings = "tnum"),
                 color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                softWrap = false,
             )
             Text(
                 text = clock.date,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
+                textAlign = TextAlign.Start,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.width(64.dp),
+                modifier = Modifier.widthIn(min = 56.dp),
             )
             Box(
                 modifier = Modifier
@@ -67,8 +73,30 @@ fun CollapsedContent(
         }
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
+            if (!speed.isIdle) {
+                Text(
+                    text = "↓" + formatRate(speed.downBytesPerSecond),
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontSize = 9.sp,
+                        fontFeatureSettings = "tnum",
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    softWrap = false,
+                )
+                Text(
+                    text = "↑" + formatRate(speed.upBytesPerSecond),
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontSize = 9.sp,
+                        fontFeatureSettings = "tnum",
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    softWrap = false,
+                )
+            }
             if (services.notifications.current != null) {
                 Box(
                     modifier = Modifier
@@ -94,7 +122,22 @@ fun CollapsedContent(
                 text = battery.percent?.let { it.toString() + "%" } ?: "—",
                 style = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = "tnum"),
                 color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                softWrap = false,
             )
         }
+    }
+}
+
+private fun formatRate(bytesPerSecond: Long): String {
+    val kilobytes = bytesPerSecond / 1024.0
+    if (kilobytes < 1.0) return "0"
+    if (kilobytes < 1_000.0) return kilobytes.roundToInt().toString() + "K"
+    val megabytes = kilobytes / 1024.0
+    val rounded = (megabytes * 10).roundToInt() / 10.0
+    return if (rounded % 1.0 == 0.0) {
+        rounded.toInt().toString() + "M"
+    } else {
+        rounded.toString() + "M"
     }
 }
