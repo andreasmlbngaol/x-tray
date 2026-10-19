@@ -10,13 +10,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -31,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import id.andreasmlbngaol.islanddesk.core.IslandModule
 import id.andreasmlbngaol.islanddesk.core.activity.LiveActivityController
 import id.andreasmlbngaol.islanddesk.ui.services.IslandServices
@@ -38,7 +41,7 @@ import kotlinx.coroutines.delay
 
 class FocusModule(private val services: IslandServices) : IslandModule {
     override val id = "focus"
-    override val title = "Fokus"
+    override val title = "Focus"
     override val icon: ImageVector = Icons.Rounded.Timer
     override val priority = 70
 
@@ -48,15 +51,11 @@ class FocusModule(private val services: IslandServices) : IslandModule {
         val activity = services.activity.current
         var tick by remember { mutableIntStateOf(0) }
         LaunchedEffect(activity?.id) {
-            var notified = false
-            while (services.activity.current != null) {
+            if (activity == null) return@LaunchedEffect
+            while (true) {
                 delay(1_000L)
                 tick++
-                if (!notified && services.activity.isFinished()) {
-                    notified = true
-                    services.notifications.push("Sesi fokus selesai")
-                    break
-                }
+                if (services.activity.isFinished()) break
             }
         }
         if (activity == null) {
@@ -67,10 +66,10 @@ class FocusModule(private val services: IslandServices) : IslandModule {
             ) {
                 Icon(Icons.Rounded.Timer, contentDescription = null, modifier = Modifier.size(20.dp))
                 Column {
-                    Text("Fokus", style = MaterialTheme.typography.titleSmall)
+                    Text("Focus", style = MaterialTheme.typography.titleSmall)
                     Text(
-                        "Mulai sesi " + services.settings.current.focusMinutes + " menit",
-                        style = MaterialTheme.typography.bodySmall,
+                        "Open the panel to start a session",
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -85,17 +84,22 @@ class FocusModule(private val services: IslandServices) : IslandModule {
         ) {
             Icon(Icons.Rounded.Timer, contentDescription = null, modifier = Modifier.size(20.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(activity.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
-                    text = LiveActivityController.format(services.activity.remainingMs()) + " tersisa",
-                    style = MaterialTheme.typography.bodySmall,
+                    text = activity.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = LiveActivityController.format(services.activity.remainingMs()) + " left",
+                    style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 LinearWavyProgressIndicator(
                     progress = { services.activity.progress() },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(10.dp),
+                        .height(8.dp),
                     color = MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 )
@@ -109,68 +113,169 @@ class FocusModule(private val services: IslandServices) : IslandModule {
         val activity = services.activity.current
         var tick by remember { mutableIntStateOf(0) }
         LaunchedEffect(activity?.id) {
-            while (services.activity.current != null) {
+            if (activity == null) return@LaunchedEffect
+            while (true) {
                 delay(1_000L)
                 tick++
+                if (services.activity.isFinished()) {
+                    services.notifications.push("Focus session complete")
+                    break
+                }
             }
         }
 
+        if (activity != null) {
+            RunningSession(activity.title, tick)
+            return
+        }
+
+        val defaultSeconds = services.settings.current.focusSeconds
+        var hours by remember(defaultSeconds) { mutableIntStateOf(defaultSeconds / 3_600) }
+        var minutes by remember(defaultSeconds) { mutableIntStateOf((defaultSeconds % 3_600) / 60) }
+        var seconds by remember(defaultSeconds) { mutableIntStateOf(defaultSeconds % 60) }
+        val total = hours * 3_600 + minutes * 60 + seconds
+
         Column(
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            if (activity == null) {
-                Spacer(Modifier.height(12.dp))
-                Icon(
-                    imageVector = Icons.Rounded.Timer,
-                    contentDescription = null,
-                    modifier = Modifier.size(36.dp),
-                    tint = MaterialTheme.colorScheme.primary,
+            Icon(
+                imageVector = Icons.Rounded.Timer,
+                contentDescription = null,
+                modifier = Modifier.size(32.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text("Focus session", style = MaterialTheme.typography.titleLargeEmphasized)
+            Text(
+                text = "Choose a duration",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(14.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                TimeUnit(
+                    value = hours,
+                    range = 0..12,
+                    onChange = { hours = it },
                 )
-                Text("Sesi fokus", style = MaterialTheme.typography.titleLargeEmphasized)
-                Text(
-                    "Timer tampil di island selama berjalan.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                Text(":", style = MaterialTheme.typography.titleLargeEmphasized)
+                TimeUnit(
+                    value = minutes,
+                    range = 0..59,
+                    onChange = { minutes = it },
                 )
-                Spacer(Modifier.height(4.dp))
-                Button(onClick = {
-                    services.activity.start("Fokus", services.settings.current.focusMinutes)
-                }) {
-                    Text("Mulai " + services.settings.current.focusMinutes + " menit")
-                }
-            } else {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = LiveActivityController.format(services.activity.remainingMs()),
-                    style = MaterialTheme.typography.displayMediumEmphasized,
-                )
-                Text(
-                    text = activity.title,
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                LinearWavyProgressIndicator(
-                    progress = { services.activity.progress() },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(24.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    FilledTonalButton(onClick = { services.activity.stop() }) {
-                        Icon(Icons.Rounded.Stop, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Hentikan")
-                    }
-                }
-                Text(
-                    text = if (services.activity.isFinished()) "Sesi selesai" else "Tetap fokus.",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                Text(":", style = MaterialTheme.typography.titleLargeEmphasized)
+                TimeUnit(
+                    value = seconds,
+                    range = 0..59,
+                    onChange = { seconds = it },
                 )
             }
+            Text(
+                text = "hours      minutes      seconds",
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(Modifier.height(16.dp))
+            Button(
+                onClick = {
+                    val duration = total.coerceAtLeast(1)
+                    services.settings.update { it.copy(focusSeconds = duration) }
+                    services.activity.startSeconds("Focus", duration.toLong())
+                },
+                enabled = total > 0,
+            ) {
+                Text("Start focus")
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = "The timer stays visible in the peek.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+
+    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+    @Composable
+    private fun RunningSession(title: String, tick: Int) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = LiveActivityController.format(services.activity.remainingMs()),
+                style = MaterialTheme.typography.displayMediumEmphasized.copy(
+                    fontFeatureSettings = "tnum",
+                ),
+            )
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(10.dp))
+            LinearWavyProgressIndicator(
+                progress = { services.activity.progress() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(18.dp),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            )
+            Spacer(Modifier.height(14.dp))
+            FilledTonalButton(onClick = { services.activity.stop() }) {
+                Icon(Icons.Rounded.Stop, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Stop")
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = if (services.activity.isFinished()) "Session complete" else "Stay focused.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun TimeUnit(
+    value: Int,
+    range: IntRange,
+    onChange: (Int) -> Unit,
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        IconButton(
+            onClick = { onChange(if (value >= range.last) range.first else value + 1) },
+            modifier = Modifier.size(26.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.KeyboardArrowUp,
+                contentDescription = "Increase",
+                modifier = Modifier.size(18.dp),
+            )
+        }
+        Text(
+            text = value.toString().padStart(2, '0'),
+            style = MaterialTheme.typography.titleLargeEmphasized.copy(
+                fontSize = 28.sp,
+                fontFeatureSettings = "tnum",
+            ),
+        )
+        IconButton(
+            onClick = { onChange(if (value <= range.first) range.last else value - 1) },
+            modifier = Modifier.size(26.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.KeyboardArrowDown,
+                contentDescription = "Decrease",
+                modifier = Modifier.size(18.dp),
+            )
         }
     }
 }

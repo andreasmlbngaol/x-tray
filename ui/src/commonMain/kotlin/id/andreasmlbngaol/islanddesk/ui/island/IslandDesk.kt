@@ -1,12 +1,19 @@
 package id.andreasmlbngaol.islanddesk.ui.island
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Box
@@ -26,6 +33,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.draganddrop.DragAndDropTarget
+import androidx.compose.ui.draganddrop.DragData
+import androidx.compose.ui.draganddrop.dragData
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
@@ -38,7 +50,9 @@ import id.andreasmlbngaol.islanddesk.core.geometry.IslandGeometry
 import id.andreasmlbngaol.islanddesk.ui.modules.ModuleCatalog
 import id.andreasmlbngaol.islanddesk.ui.services.IslandServices
 import id.andreasmlbngaol.islanddesk.ui.theme.LocalReduceMotion
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 /**
  * The island itself: a single morphing surface with three disclosure levels.
@@ -47,24 +61,29 @@ import kotlinx.coroutines.delay
  * react to [onStateChange] (window resize) and [onGeometryChanged] (input
  * region shaping).
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(
+    ExperimentalMaterial3ExpressiveApi::class,
+    androidx.compose.foundation.ExperimentalFoundationApi::class,
+    androidx.compose.ui.ExperimentalComposeUiApi::class,
+)
 @Composable
 fun IslandDesk(
     services: IslandServices,
     modifier: Modifier = Modifier,
     stateRequest: IslandStateRequest? = null,
+    initialModuleId: String? = null,
     onStateChange: (IslandState) -> Unit = {},
     onGeometryChanged: (IslandGeometry) -> Unit = {},
 ) {
     val settings = services.settings.current
-    val config = remember(settings.hoverIntentMs, settings.peekToExpandedMs, settings.collapseDelayMs) {
+    val config = remember(settings.hoverIntentMs, settings.collapseDelayMs) {
         IslandConfig.from(settings)
     }
     val machine = remember { IslandStateMachine(config) }
     LaunchedEffect(config) { machine.config = config }
     var state by remember { mutableStateOf(machine.state) }
     var hoverEpoch by remember { mutableIntStateOf(0) }
-    var activeModuleId by remember { mutableStateOf<String?>(null) }
+    var activeModuleId by remember { mutableStateOf(initialModuleId) }
 
     val allModules = remember(services) { ModuleCatalog.create(services) }
     val modules = remember(
@@ -92,6 +111,7 @@ fun IslandDesk(
 
     val interactionSource = remember { MutableInteractionSource() }
     val isHovered by interactionSource.collectIsHoveredAsState()
+    var isDragOver by remember { mutableStateOf(false) }
 
     fun publish() {
         state = machine.state
@@ -100,6 +120,34 @@ fun IslandDesk(
 
     LaunchedEffect(Unit) {
         onStateChange(state)
+    }
+
+    val dropTarget = remember(services) {
+        object : DragAndDropTarget {
+            override fun onEntered(event: DragAndDropEvent) {
+                if (event.dragData() is DragData.FilesList) isDragOver = true
+            }
+
+            override fun onExited(event: DragAndDropEvent) {
+                isDragOver = false
+            }
+
+            override fun onEnded(event: DragAndDropEvent) {
+                isDragOver = false
+            }
+
+            override fun onDrop(event: DragAndDropEvent): Boolean {
+                isDragOver = false
+                val files = (event.dragData() as? DragData.FilesList)?.readFiles().orEmpty()
+                if (files.isEmpty()) return false
+                services.shelf.add(files, System.currentTimeMillis())
+                services.bump()
+                activeModuleId = "shelf"
+                machine.onActivate()
+                publish()
+                return true
+            }
+        }
     }
 
     LaunchedEffect(stateRequest?.id) {
@@ -113,13 +161,6 @@ fun IslandDesk(
         hoverEpoch++
     }
 
-    LaunchedEffect(settings.doNotDisturb) {
-        if (settings.doNotDisturb) {
-            machine.onDismiss()
-            publish()
-        }
-    }
-
     LaunchedEffect(isHovered) {
         val now = System.currentTimeMillis()
         if (isHovered && !services.settings.current.doNotDisturb) {
@@ -129,6 +170,16 @@ fun IslandDesk(
         }
         publish()
         hoverEpoch++
+    }
+
+    LaunchedEffect(state) {
+        if (state == IslandState.Collapsed) return@LaunchedEffect
+        while (true) {
+            services.mediaTrack = withContext(Dispatchers.Default) {
+                runCatching { services.media.snapshot() }.getOrNull()
+            }
+            delay(1_500L)
+        }
     }
 
     LaunchedEffect(state, hoverEpoch) {
@@ -210,11 +261,26 @@ fun IslandDesk(
                         clip = false,
                     )
                     .clip(shape)
-                    .background(MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.98f))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.98f),
+                                MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.99f),
+                            )
+                        )
+                    )
                     .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                        width = if (isDragOver) 2.dp else 1.dp,
+                        color = if (isDragOver) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                        },
                         shape = shape,
+                    )
+                    .dragAndDropTarget(
+                        shouldStartDragAndDrop = { event -> event.dragData() is DragData.FilesList },
+                        target = dropTarget,
                     )
                     .clickable(
                         interactionSource = interactionSource,
@@ -225,26 +291,59 @@ fun IslandDesk(
                         hoverEpoch++
                     },
             ) {
-                Crossfade(
-                    targetState = state,
-                    animationSpec = if (reduceMotion) snap() else tween(160),
-                    label = "islandState",
-                ) { current ->
-                    when (current) {
-                        IslandState.Collapsed -> CollapsedContent(services = services)
-                        IslandState.Peek -> PeekContent(
-                            activeModule = activeModule,
+                if (reduceMotion) {
+                    Crossfade(
+                        targetState = state,
+                        animationSpec = snap(),
+                        label = "islandState",
+                    ) { current ->
+                        IslandStateContent(
+                            state = current,
                             services = services,
-                        )
-                        IslandState.Expanded -> ExpandedContent(
                             modules = modules,
                             activeModule = activeModule,
                             onSelectModule = { activeModuleId = it },
+                        )
+                    }
+                } else {
+                    AnimatedContent(
+                        targetState = state,
+                        transitionSpec = {
+                            (fadeIn(tween(180)) + scaleIn(initialScale = 0.97f)) togetherWith
+                                (fadeOut(tween(120)) + scaleOut(targetScale = 0.99f))
+                        },
+                        label = "islandState",
+                    ) { current ->
+                        IslandStateContent(
+                            state = current,
                             services = services,
+                            modules = modules,
+                            activeModule = activeModule,
+                            onSelectModule = { activeModuleId = it },
                         )
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun IslandStateContent(
+    state: IslandState,
+    services: IslandServices,
+    modules: List<id.andreasmlbngaol.islanddesk.core.IslandModule>,
+    activeModule: id.andreasmlbngaol.islanddesk.core.IslandModule?,
+    onSelectModule: (String) -> Unit,
+) {
+    when (state) {
+        IslandState.Collapsed -> CollapsedContent(services = services)
+        IslandState.Peek -> PeekContent(services = services)
+        IslandState.Expanded -> ExpandedContent(
+            modules = modules,
+            activeModule = activeModule,
+            onSelectModule = onSelectModule,
+            services = services,
+        )
     }
 }

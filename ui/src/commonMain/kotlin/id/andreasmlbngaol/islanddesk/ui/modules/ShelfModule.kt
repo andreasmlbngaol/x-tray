@@ -48,11 +48,11 @@ class ShelfModule(private val services: IslandServices) : IslandModule {
             Icon(Icons.Rounded.Folder, contentDescription = null, modifier = Modifier.size(20.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = if (items.isEmpty()) "Shelf kosong" else items.size.toString() + " item di shelf",
+                    text = if (items.isEmpty()) "Shelf is empty" else items.size.toString() + " items on the shelf",
                     style = MaterialTheme.typography.titleSmall,
                 )
                 Text(
-                    text = if (items.isEmpty()) "Tarik file ke island" else items.joinToString(" • ") { it.name },
+                    text = if (items.isEmpty()) "Drop files onto the island" else items.joinToString(" • ") { it.name },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -80,7 +80,7 @@ class ShelfModule(private val services: IslandServices) : IslandModule {
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
-                        text = "Tarik file ke island",
+                        text = "Drop files onto the island",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 8.dp),
@@ -128,7 +128,7 @@ class ShelfModule(private val services: IslandServices) : IslandModule {
                                 IconButton(onClick = { services.fileOpener.open(item.path) }) {
                                     Icon(
                                         imageVector = Icons.Rounded.OpenInNew,
-                                        contentDescription = "Buka",
+                                        contentDescription = "Open",
                                         modifier = Modifier.size(16.dp),
                                     )
                                 }
@@ -140,7 +140,7 @@ class ShelfModule(private val services: IslandServices) : IslandModule {
                                 ) {
                                     Icon(
                                         imageVector = Icons.Rounded.Delete,
-                                        contentDescription = "Hapus",
+                                        contentDescription = "Delete",
                                         modifier = Modifier.size(16.dp),
                                     )
                                 }
@@ -150,7 +150,7 @@ class ShelfModule(private val services: IslandServices) : IslandModule {
                 }
             }
             Text(
-                text = "Item hanya bertahan selama sesi ini.",
+                text = "Items last for this session only.",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

@@ -18,23 +18,23 @@ object IslandDimens {
     val WindowTopPadding = 0.dp
 
     val Collapsed = IslandSize(
-        width = 200.dp,
-        height = 36.dp,
-        bottomRadius = 18.dp,
+        width = 220.dp,
+        height = 38.dp,
+        bottomRadius = 19.dp,
         filletRadius = 8.dp,
     )
 
     val Peek = IslandSize(
-        width = 380.dp,
-        height = 100.dp,
-        bottomRadius = 28.dp,
-        filletRadius = 10.dp,
+        width = 420.dp,
+        height = 140.dp,
+        bottomRadius = 34.dp,
+        filletRadius = 12.dp,
     )
 
     val Expanded = IslandSize(
-        width = 440.dp,
-        height = 600.dp,
-        bottomRadius = 32.dp,
+        width = 460.dp,
+        height = 620.dp,
+        bottomRadius = 34.dp,
         filletRadius = 12.dp,
     )
 

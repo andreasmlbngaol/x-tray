@@ -1,5 +1,6 @@
 package id.andreasmlbngaol.islanddesk.app
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -27,6 +28,7 @@ import id.andreasmlbngaol.islanddesk.core.ipc.IpcCommand
 import id.andreasmlbngaol.islanddesk.core.ipc.parseIpcCommand
 import id.andreasmlbngaol.islanddesk.core.notification.NotificationCenter
 import id.andreasmlbngaol.islanddesk.core.settings.SettingsStore
+import id.andreasmlbngaol.islanddesk.core.settings.ThemeMode
 import id.andreasmlbngaol.islanddesk.core.shelf.ShelfStore
 import id.andreasmlbngaol.islanddesk.platform.DisplayInfo
 import id.andreasmlbngaol.islanddesk.platform.SessionInfo
@@ -56,13 +58,7 @@ import java.awt.PopupMenu
 import java.awt.RenderingHints
 import java.awt.SystemTray
 import java.awt.TrayIcon
-import java.awt.datatransfer.DataFlavor
-import java.awt.dnd.DnDConstants
-import java.awt.dnd.DropTarget
-import java.awt.dnd.DropTargetAdapter
-import java.awt.dnd.DropTargetDropEvent
 import java.awt.image.BufferedImage
-import java.io.File
 import javax.swing.SwingUtilities
 import kotlin.system.exitProcess
 
@@ -78,7 +74,7 @@ fun main(args: Array<String>) {
         }
         val reply = sendIpc(AppPaths.socket, command)
         if (reply == null) {
-            System.err.println("IslandDesk: tidak ada instance yang berjalan")
+            System.err.println("IslandDesk: no running instance")
             exitProcess(1)
         }
         println(reply)
@@ -273,20 +269,21 @@ private fun ApplicationScope.IslandDeskApp() {
             }
         }
 
-        LaunchedEffect(Unit) {
-            installDropTarget(window) { paths ->
-                SwingUtilities.invokeLater {
-                    services.shelf.add(paths, System.currentTimeMillis())
-                    services.bump()
-                    requestState(IslandState.Expanded)
-                }
-            }
+        val systemDark = isSystemInDarkTheme()
+        val darkTheme = when (settings.current.themeMode) {
+            ThemeMode.System -> systemDark
+            ThemeMode.Light -> false
+            ThemeMode.Dark -> true
         }
 
-        IslandDeskTheme(darkTheme = true) {
+        IslandDeskTheme(
+            darkTheme = darkTheme,
+            reduceMotion = settings.current.reduceMotion,
+        ) {
             IslandDesk(
                 services = services,
                 stateRequest = stateRequest,
+                initialModuleId = System.getenv("ISLANDDESK_MODULE"),
                 onStateChange = {
                     islandState = it
                     Log.i("state=" + it)
@@ -393,36 +390,6 @@ private fun handleCommand(
     }
 }
 
-private fun installDropTarget(window: java.awt.Window, onFiles: (List<String>) -> Unit): DropTarget {
-    val target = DropTarget(
-        window,
-        DnDConstants.ACTION_COPY,
-        object : DropTargetAdapter() {
-            override fun drop(event: DropTargetDropEvent) {
-                event.acceptDrop(DnDConstants.ACTION_COPY)
-                val paths = runCatching {
-                    val transferable = event.transferable
-                    if (transferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
-                        @Suppress("UNCHECKED_CAST")
-                        val files = transferable.getTransferData(DataFlavor.javaFileListFlavor) as List<File>
-                        files.map { it.absolutePath }
-                    } else {
-                        emptyList()
-                    }
-                }.getOrDefault(emptyList())
-                if (paths.isNotEmpty()) {
-                    onFiles(paths)
-                    event.dropComplete(true)
-                } else {
-                    event.dropComplete(false)
-                }
-            }
-        },
-    )
-    target.isActive = true
-    return target
-}
-
 private fun installTray(
     onToggle: () -> Unit,
     onCollapse: () -> Unit,
@@ -436,18 +403,18 @@ private fun installTray(
     }
     return runCatching {
         val popup = PopupMenu()
-        popup.add(MenuItem("Buka panel").apply { addActionListener { onToggle() } })
-        popup.add(MenuItem("Ciutkan").apply { addActionListener { onCollapse() } })
+        popup.add(MenuItem("Open panel").apply { addActionListener { onToggle() } })
+        popup.add(MenuItem("Collapse").apply { addActionListener { onCollapse() } })
         popup.addSeparator()
         popup.add(
-            java.awt.CheckboxMenuItem("Jangan ganggu", isDnd()).apply {
+            java.awt.CheckboxMenuItem("Do not disturb", isDnd()).apply {
                 addItemListener { event ->
                     setDnd((event.source as java.awt.CheckboxMenuItem).state)
                 }
             }
         )
         popup.addSeparator()
-        popup.add(MenuItem("Keluar").apply { addActionListener { onQuit() } })
+        popup.add(MenuItem("Quit").apply { addActionListener { onQuit() } })
 
         val icon = TrayIcon(trayImage(), "IslandDesk", popup)
         icon.isImageAutoSize = true

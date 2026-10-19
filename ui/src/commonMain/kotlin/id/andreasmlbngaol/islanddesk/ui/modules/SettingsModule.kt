@@ -10,11 +10,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -32,12 +34,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import id.andreasmlbngaol.islanddesk.core.IslandModule
+import id.andreasmlbngaol.islanddesk.core.settings.ThemeMode
 import id.andreasmlbngaol.islanddesk.platform.DisplayInfo
 import id.andreasmlbngaol.islanddesk.ui.services.IslandServices
 
 class SettingsModule(private val services: IslandServices) : IslandModule {
     override val id = "settings"
-    override val title = "Setelan"
+    override val title = "Settings"
     override val icon: ImageVector = Icons.Rounded.Settings
     override val priority = 10
 
@@ -50,10 +53,10 @@ class SettingsModule(private val services: IslandServices) : IslandModule {
         ) {
             Icon(Icons.Rounded.Settings, contentDescription = null, modifier = Modifier.size(20.dp))
             Column {
-                Text("Pengaturan", style = MaterialTheme.typography.titleSmall)
+                Text("Settings", style = MaterialTheme.typography.titleSmall)
                 Text(
-                    "Tema, startup, dan monitor",
-                    style = MaterialTheme.typography.bodySmall,
+                    "Theme, startup and display",
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -68,28 +71,56 @@ class SettingsModule(private val services: IslandServices) : IslandModule {
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            SettingsCard {
+            Section(title = "Appearance") {
+                Text(
+                    text = "Theme",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ThemeMode.entries.forEach { mode ->
+                        FilterChip(
+                            selected = settings.themeMode == mode,
+                            onClick = {
+                                services.settings.update { it.copy(themeMode = mode) }
+                            },
+                            label = {
+                                Text(
+                                    text = when (mode) {
+                                        ThemeMode.System -> "System"
+                                        ThemeMode.Light -> "Light"
+                                        ThemeMode.Dark -> "Dark"
+                                    },
+                                    style = MaterialTheme.typography.labelMedium,
+                                )
+                            },
+                        )
+                    }
+                }
                 SwitchRow(
-                    title = "Kurangi animasi",
-                    subtitle = "Transisi langsung tanpa pegas",
+                    title = "Reduce motion",
+                    subtitle = "Snap between states instead of springing",
                     checked = settings.reduceMotion,
                     onCheckedChange = { value ->
                         services.settings.update { it.copy(reduceMotion = value) }
                     },
                 )
+            }
+
+            Section(title = "Behaviour") {
                 SwitchRow(
-                    title = "Jangan ganggu",
-                    subtitle = "Hover tidak membuka panel",
+                    title = "Do not disturb",
+                    subtitle = "Hover stays collapsed; notifications are muted",
                     checked = settings.doNotDisturb,
                     onCheckedChange = { value ->
                         services.settings.update { it.copy(doNotDisturb = value) }
                     },
                 )
                 SwitchRow(
-                    title = "Mulai saat login",
-                    subtitle = "Menulis entri autostart XDG",
+                    title = "Start at login",
+                    subtitle = "Writes an XDG autostart entry",
                     checked = services.autostart.isEnabled(),
                     onCheckedChange = { value ->
                         services.autostart.setEnabled(value)
@@ -98,15 +129,10 @@ class SettingsModule(private val services: IslandServices) : IslandModule {
                 )
             }
 
-            SettingsCard {
-                Text(
-                    "Monitor",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            Section(title = "Display") {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "Monitor " + (settings.monitorIndex + 1) + " dari " + screens,
+                        text = "Monitor " + (settings.monitorIndex + 1) + " of " + screens,
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.weight(1f),
                     )
@@ -117,17 +143,17 @@ class SettingsModule(private val services: IslandServices) : IslandModule {
                             }
                         },
                     ) {
-                        Text("Ganti")
+                        Text("Next monitor")
                     }
                 }
             }
 
-            SettingsCard {
+            Section(title = "Timing") {
                 var hoverDraft by remember(settings.hoverIntentMs) {
                     mutableFloatStateOf(settings.hoverIntentMs.toFloat())
                 }
                 Text(
-                    "Jeda hover: " + hoverDraft.toInt() + " ms",
+                    text = "Hover delay: " + hoverDraft.toInt() + " ms",
                     style = MaterialTheme.typography.labelMedium,
                 )
                 Slider(
@@ -143,7 +169,7 @@ class SettingsModule(private val services: IslandServices) : IslandModule {
                     mutableFloatStateOf(settings.collapseDelayMs.toFloat())
                 }
                 Text(
-                    "Jeda tutup: " + collapseDraft.toInt() + " ms",
+                    text = "Peek close delay: " + collapseDraft.toInt() + " ms",
                     style = MaterialTheme.typography.labelMedium,
                 )
                 Slider(
@@ -152,14 +178,19 @@ class SettingsModule(private val services: IslandServices) : IslandModule {
                     onValueChangeFinished = {
                         services.settings.update { it.copy(collapseDelayMs = collapseDraft.toLong()) }
                     },
-                    valueRange = 0f..1_500f,
+                    valueRange = 0f..1_000f,
                 )
             }
 
-            SettingsCard {
+            Section(title = "About") {
                 Text("IslandDesk 0.1.0", style = MaterialTheme.typography.labelSmall)
                 Text(
-                    "Kotlin " + KotlinVersion.CURRENT + " • Compose Multiplatform",
+                    text = "Kotlin " + KotlinVersion.CURRENT + " • Compose Multiplatform",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = "Media through MPRIS • controls through PipeWire and NetworkManager",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -169,17 +200,28 @@ class SettingsModule(private val services: IslandServices) : IslandModule {
 }
 
 @Composable
-private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            content = content,
+private fun Section(
+    title: String,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 4.dp),
         )
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(22.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                content = content,
+            )
+        }
     }
 }
 
@@ -202,6 +244,7 @@ private fun SwitchRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        Spacer(Modifier.width(8.dp))
         Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }

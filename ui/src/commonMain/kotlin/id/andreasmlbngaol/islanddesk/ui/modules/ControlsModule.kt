@@ -43,7 +43,7 @@ import kotlinx.coroutines.withContext
 
 class ControlsModule(private val services: IslandServices) : IslandModule {
     override val id = "controls"
-    override val title = "Kontrol"
+    override val title = "Controls"
     override val icon: ImageVector = Icons.Rounded.Tune
     override val priority = 40
 
@@ -70,10 +70,10 @@ class ControlsModule(private val services: IslandServices) : IslandModule {
                 )
                 Text(
                     text = listOfNotNull(
-                        state.brightnessPercent?.let { "Layar " + it + "%" },
-                        state.wifiEnabled?.let { if (it) "Wi-Fi aktif" else "Wi-Fi mati" },
-                        state.bluetoothEnabled?.let { if (it) "Bluetooth aktif" else "Bluetooth mati" },
-                    ).joinToString(" • ").ifBlank { "Kontrol sistem" },
+                        state.brightnessPercent?.let { "Screen " + it + "%" },
+                        state.wifiEnabled?.let { if (it) "Wi-Fi on" else "Wi-Fi off" },
+                        state.bluetoothEnabled?.let { if (it) "Bluetooth on" else "Bluetooth off" },
+                    ).joinToString(" • ").ifBlank { "System controls" },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -108,8 +108,8 @@ class ControlsModule(private val services: IslandServices) : IslandModule {
                     },
                 )
                 ControlTile(
-                    label = "Bisukan",
-                    value = if (state.muted == true) "Aktif" else "Mati",
+                    label = "Mute",
+                    value = if (state.muted == true) "On" else "Off",
                     icon = Icons.AutoMirrored.Rounded.VolumeOff,
                     modifier = Modifier.weight(1f),
                     onClick = {
@@ -121,7 +121,7 @@ class ControlsModule(private val services: IslandServices) : IslandModule {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (services.controls.hasBrightness) {
                     ControlTile(
-                        label = "Kecerahan",
+                        label = "Brightness",
                         value = state.brightnessPercent?.toString()?.plus("%") ?: "—",
                         icon = Icons.Rounded.Brightness6,
                         modifier = Modifier.weight(1f),
@@ -133,7 +133,7 @@ class ControlsModule(private val services: IslandServices) : IslandModule {
                 }
                 ControlTile(
                     label = "Mic",
-                    value = if (state.micMuted == true) "Mati" else "Aktif",
+                    value = if (state.micMuted == true) "Off" else "On",
                     icon = if (state.micMuted == true) Icons.Rounded.MicOff else Icons.Rounded.Mic,
                     modifier = Modifier.weight(1f),
                     onClick = {
@@ -146,7 +146,7 @@ class ControlsModule(private val services: IslandServices) : IslandModule {
                 if (services.controls.hasWifi) {
                     ControlTile(
                         label = "Wi-Fi",
-                        value = if (state.wifiEnabled == true) "Aktif" else "Mati",
+                        value = if (state.wifiEnabled == true) "On" else "Off",
                         icon = if (state.wifiEnabled == true) Icons.Rounded.Wifi else Icons.Rounded.WifiOff,
                         modifier = Modifier.weight(1f),
                         onClick = {
@@ -158,7 +158,7 @@ class ControlsModule(private val services: IslandServices) : IslandModule {
                 if (services.controls.hasBluetooth) {
                     ControlTile(
                         label = "Bluetooth",
-                        value = if (state.bluetoothEnabled == true) "Aktif" else "Mati",
+                        value = if (state.bluetoothEnabled == true) "On" else "Off",
                         icon = if (state.bluetoothEnabled == true) Icons.Rounded.Bluetooth else Icons.Rounded.BluetoothDisabled,
                         modifier = Modifier.weight(1f),
                         onClick = {
@@ -171,8 +171,8 @@ class ControlsModule(private val services: IslandServices) : IslandModule {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 val dnd = services.settings.current.doNotDisturb
                 ControlTile(
-                    label = "Jangan ganggu",
-                    value = if (dnd) "Aktif" else "Mati",
+                    label = "Do not disturb",
+                    value = if (dnd) "On" else "Off",
                     icon = Icons.Rounded.DoNotDisturbOn,
                     modifier = Modifier.weight(1f),
                     onClick = {

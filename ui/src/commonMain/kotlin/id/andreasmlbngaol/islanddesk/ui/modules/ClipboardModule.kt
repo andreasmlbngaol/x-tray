@@ -52,9 +52,9 @@ class ClipboardModule(private val services: IslandServices) : IslandModule {
             ) {
                 Icon(Icons.Rounded.ContentPaste, contentDescription = null, modifier = Modifier.size(20.dp))
                 Column {
-                    Text("Clipboard kosong", style = MaterialTheme.typography.titleSmall)
+                    Text("Clipboard is empty", style = MaterialTheme.typography.titleSmall)
                     Text(
-                        "Teks yang disalin akan muncul di sini",
+                        "Copied text will appear here",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -70,7 +70,7 @@ class ClipboardModule(private val services: IslandServices) : IslandModule {
             Icon(Icons.Rounded.ContentPaste, contentDescription = null, modifier = Modifier.size(20.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = items.size.toString() + " item terbaru",
+                    text = items.size.toString() + " recent items",
                     style = MaterialTheme.typography.titleSmall,
                 )
                 Text(
@@ -97,14 +97,14 @@ class ClipboardModule(private val services: IslandServices) : IslandModule {
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    text = "Riwayat teks (" + items.size + ")",
+                    text = "Text history (" + items.size + ")",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 IconButton(onClick = { services.clipboardPaused = !services.clipboardPaused }) {
                     Icon(
                         imageVector = if (services.clipboardPaused) Icons.Rounded.PlayCircle else Icons.Rounded.PauseCircle,
-                        contentDescription = if (services.clipboardPaused) "Lanjutkan" else "Jeda",
+                        contentDescription = if (services.clipboardPaused) "Resume" else "Pause",
                         modifier = Modifier.size(20.dp),
                     )
                 }
@@ -112,7 +112,7 @@ class ClipboardModule(private val services: IslandServices) : IslandModule {
 
             if (items.isEmpty()) {
                 Text(
-                    text = "Belum ada teks yang disalin.",
+                    text = "Nothing copied yet.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 12.dp),
@@ -160,7 +160,7 @@ class ClipboardModule(private val services: IslandServices) : IslandModule {
                                 ) {
                                     Icon(
                                         imageVector = Icons.Rounded.Delete,
-                                        contentDescription = "Hapus",
+                                        contentDescription = "Delete",
                                         modifier = Modifier.size(16.dp),
                                     )
                                 }
@@ -171,7 +171,7 @@ class ClipboardModule(private val services: IslandServices) : IslandModule {
             }
 
             Text(
-                text = "Klik untuk menyalin ulang. Data hanya di memori.",
+                text = "Click to copy again. Stored in memory only.",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

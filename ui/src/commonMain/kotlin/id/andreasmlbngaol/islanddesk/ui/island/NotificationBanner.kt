@@ -53,7 +53,7 @@ fun NotificationBanner(
             IconButton(onClick = onDismiss) {
                 Icon(
                     imageVector = Icons.Rounded.Close,
-                    contentDescription = "Tutup",
+                    contentDescription = "Dismiss",
                     modifier = Modifier.size(16.dp),
                 )
             }
