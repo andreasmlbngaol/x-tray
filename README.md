@@ -175,6 +175,7 @@ Keputusan desain ada di `docs/design-notes.md`.
 
 ## Lisensi dan aset
 
+- Kode X-Tray: **Apache License 2.0** (lihat `LICENSE`).
 - Font **Google Sans Flex** dipakai dengan lisensi SIL Open Font License 1.1
   (`docs/licenses/google_sans_flex_OFL.txt`).
 - PixelPlayer hanya dipelajari sebagai referensi desain. Kodenya proprietary,
