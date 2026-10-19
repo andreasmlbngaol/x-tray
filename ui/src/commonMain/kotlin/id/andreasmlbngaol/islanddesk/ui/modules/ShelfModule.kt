@@ -25,6 +25,7 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.FolderZip
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.PictureAsPdf
@@ -159,12 +160,8 @@ class ShelfModule(private val services: IslandServices) : IslandModule {
                         )
                     }
                 }
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "Hover for actions · drag out to copy · session only",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Spacer(Modifier.height(10.dp))
+                ShelfHint()
             }
         }
     }
@@ -176,6 +173,45 @@ class ShelfModule(private val services: IslandServices) : IslandModule {
  * appear on hover so the tile itself stays a clean preview and can still be
  * dragged out to another application.
  */
+/** Three short lines instead of one cramped sentence. */
+@Composable
+private fun ShelfHint() {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Info,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(
+                    text = "Hover a tile to open or delete it",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = "Drag a tile out to copy the file",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = "The shelf is kept until IslandDesk closes",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun ShelfTile(

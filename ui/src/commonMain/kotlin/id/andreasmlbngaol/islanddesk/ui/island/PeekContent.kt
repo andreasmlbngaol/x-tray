@@ -50,6 +50,7 @@ import id.andreasmlbngaol.islanddesk.core.activity.LiveActivity
 import id.andreasmlbngaol.islanddesk.core.activity.LiveActivityController
 import id.andreasmlbngaol.islanddesk.platform.formatClockTime
 import id.andreasmlbngaol.islanddesk.platform.media.MediaTrack
+import id.andreasmlbngaol.islanddesk.platform.network.NetworkSpeed
 import id.andreasmlbngaol.islanddesk.ui.modules.MediaArtwork
 import id.andreasmlbngaol.islanddesk.ui.modules.formatMediaTime
 import id.andreasmlbngaol.islanddesk.ui.services.IslandServices
@@ -97,7 +98,7 @@ fun PeekContent(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        PeekClock(clock = clock, speed = services.networkSpeed, modifier = Modifier.width(74.dp))
+        PeekClock(clock = clock, modifier = Modifier.width(74.dp))
 
         Box(
             modifier = Modifier
@@ -115,6 +116,7 @@ fun PeekContent(
             } else if (activity != null) {
                 FocusHero(
                     activity = activity,
+                    speed = services.networkSpeed,
                     remainingMs = (activity.startedAtMs + activity.durationMs - nowMs).coerceAtLeast(0L),
                     progress = if (activity.durationMs <= 0L) {
                         0f
@@ -129,6 +131,7 @@ fun PeekContent(
                     batteryPercent = battery.percent,
                     batteryCharging = battery.charging,
                     dnd = services.settings.current.doNotDisturb,
+                    speed = services.networkSpeed,
                 )
 
                 if (track != null && track.hasProgress) {
@@ -228,6 +231,7 @@ private fun DropZone() {
 @Composable
 private fun FocusHero(
     activity: LiveActivity,
+    speed: NetworkSpeed,
     remainingMs: Long,
     progress: Float,
 ) {
@@ -256,6 +260,7 @@ private fun FocusHero(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
         )
+        SpeedReadout(speed = speed, fontSize = 9.sp)
     }
     Text(
         text = LiveActivityController.format(remainingMs),
@@ -283,6 +288,7 @@ private fun MediaHeader(
     batteryPercent: Int?,
     batteryCharging: Boolean,
     dnd: Boolean,
+    speed: NetworkSpeed,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -314,6 +320,7 @@ private fun MediaHeader(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        SpeedReadout(speed = speed, fontSize = 9.sp)
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(3.dp),

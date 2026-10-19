@@ -49,7 +49,7 @@ object IslandDimens {
 
     val Peek = IslandSize(
         width = 420.dp,
-        height = 148.dp,
+        height = 140.dp,
         bottomRadius = 34.dp,
         filletRadius = 12.dp,
     )

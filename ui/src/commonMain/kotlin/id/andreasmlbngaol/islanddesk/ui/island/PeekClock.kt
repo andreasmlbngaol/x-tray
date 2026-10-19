@@ -12,14 +12,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import id.andreasmlbngaol.islanddesk.platform.ClockText
-import id.andreasmlbngaol.islanddesk.platform.network.NetworkSpeed
 
 /**
  * HH / MM / ss stacked, with the seconds deliberately smaller. This is the
  * visual anchor of the peek level and keeps the digits legible at 420 px.
  */
 @Composable
-fun PeekClock(clock: ClockText, speed: NetworkSpeed, modifier: Modifier = Modifier) {
+fun PeekClock(clock: ClockText, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
         Text(
             text = clock.hours,
@@ -58,7 +57,5 @@ fun PeekClock(clock: ClockText, speed: NetworkSpeed, modifier: Modifier = Modifi
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        Spacer(Modifier.height(4.dp))
-        SpeedReadout(speed = speed, fontSize = 9.sp)
     }
 }
