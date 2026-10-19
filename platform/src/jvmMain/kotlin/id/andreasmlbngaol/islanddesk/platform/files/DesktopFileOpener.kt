@@ -3,6 +3,7 @@ package id.andreasmlbngaol.islanddesk.platform.files
 import id.andreasmlbngaol.islanddesk.platform.internal.Log
 import java.awt.Desktop
 import java.io.File
+import java.net.URI
 
 class DesktopFileOpener : FileOpener {
     private val desktop: Desktop? = if (Desktop.isDesktopSupported()) Desktop.getDesktop() else null
@@ -27,4 +28,13 @@ class DesktopFileOpener : FileOpener {
         }
         true
     }.onFailure { Log.w("cannot reveal " + path, it) }.getOrDefault(false)
+
+    override fun openUrl(url: String): Boolean = runCatching {
+        if (desktop != null) {
+            desktop.browse(URI(url))
+        } else {
+            ProcessBuilder("xdg-open", url).start()
+        }
+        true
+    }.onFailure { Log.w("cannot open url " + url, it) }.getOrDefault(false)
 }

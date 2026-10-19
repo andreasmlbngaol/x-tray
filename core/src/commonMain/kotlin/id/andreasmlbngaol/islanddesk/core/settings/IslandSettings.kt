@@ -18,6 +18,8 @@ data class IslandSettings(
     val version: Int = 1,
     val themeMode: ThemeMode = ThemeMode.System,
     val accentColor: AccentColor = AccentColor.Navy,
+    /** Optional #RRGGBB override; empty means the preset is used. */
+    val customAccent: String = "",
     val reduceMotion: Boolean = false,
     val doNotDisturb: Boolean = false,
     val startAtLogin: Boolean = false,

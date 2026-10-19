@@ -37,7 +37,9 @@ class BusctlMediaSource : MediaSource {
     override fun previous() = callPlayer("Previous")
 
     private fun callPlayer(method: String) {
-        val player = lastPlayer ?: return
+        // The first press can arrive before any snapshot has run (peek opens
+        // faster than the 1.5 s poll), so resolve the player on demand.
+        val player = lastPlayer ?: snapshot()?.busName ?: return
         Shell.run(
             "busctl", "--user", "call", player,
             "/org/mpris/MediaPlayer2", "org.mpris.MediaPlayer2.Player", method,

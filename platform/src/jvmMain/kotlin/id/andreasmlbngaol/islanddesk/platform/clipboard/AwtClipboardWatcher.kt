@@ -43,8 +43,13 @@ class AwtClipboardWatcher : ClipboardWatcher {
         }.onFailure { Log.w("cannot write clipboard", it) }
     }
 
+    /**
+     * Requests only the string flavor. `isDataFlavorAvailable` enumerates every
+     * flavor on the clipboard, which makes AWT print ClassNotFoundExceptions
+     * for foreign MIME types (for example IntelliJ's serialized objects).
+     */
     private fun readText(): String? = runCatching {
-        if (!clipboard.isDataFlavorAvailable(DataFlavor.stringFlavor)) return null
-        clipboard.getData(DataFlavor.stringFlavor) as? String
+        val contents = clipboard.getContents(null) ?: return null
+        contents.getTransferData(DataFlavor.stringFlavor) as? String
     }.getOrNull()
 }

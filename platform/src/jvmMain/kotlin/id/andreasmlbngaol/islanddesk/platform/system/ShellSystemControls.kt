@@ -14,7 +14,15 @@ class ShellSystemControls : SystemControls {
     private val hasNmcli = Shell.exists("nmcli")
     private val hasBluetoothctl = Shell.exists("bluetoothctl")
 
-    override val hasBrightness: Boolean get() = hasBrightnessctl
+    /**
+     * GNOME exposes screen brightness on the session bus, which covers
+     * machines without brightnessctl (and needs no extra privileges).
+     */
+    private val hasGnomePower = Shell.exists("busctl") && runCatching {
+        gnomeBrightness() != null
+    }.getOrDefault(false)
+
+    override val hasBrightness: Boolean get() = hasBrightnessctl || hasGnomePower
     override val hasWifi: Boolean get() = hasNmcli
     override val hasBluetooth: Boolean get() = hasBluetoothctl
 
@@ -47,14 +55,30 @@ class ShellSystemControls : SystemControls {
     }
 
     override fun brightnessStep(deltaPercent: Int) {
-        if (!hasBrightnessctl) return
-        val sign = if (deltaPercent >= 0) "+" else "-"
-        Shell.run("brightnessctl", "set", Math.abs(deltaPercent).toString() + "%" + sign)
+        if (hasBrightnessctl) {
+            val sign = if (deltaPercent >= 0) "+" else "-"
+            Shell.run("brightnessctl", "set", Math.abs(deltaPercent).toString() + "%" + sign)
+            return
+        }
+        val current = brightnessPercent() ?: return
+        setBrightness(current + deltaPercent)
     }
 
     override fun setBrightness(percent: Int) {
-        if (!hasBrightnessctl) return
-        Shell.run("brightnessctl", "set", percent.coerceIn(1, 100).toString() + "%")
+        val value = percent.coerceIn(1, 100)
+        if (hasBrightnessctl) {
+            Shell.run("brightnessctl", "set", value.toString() + "%")
+            return
+        }
+        if (hasGnomePower) {
+            Shell.run(
+                "busctl", "--user", "set-property",
+                "org.gnome.SettingsDaemon.Power",
+                "/org/gnome/SettingsDaemon/Power",
+                "org.gnome.SettingsDaemon.Power.Screen",
+                "Brightness", "i", value.toString(),
+            )
+        }
     }
 
     override fun toggleWifi() {
@@ -89,10 +113,23 @@ class ShellSystemControls : SystemControls {
     }
 
     private fun brightnessPercent(): Int? {
-        if (!hasBrightnessctl) return null
-        val output = Shell.run("brightnessctl", "-m") ?: return null
-        val match = Regex("(\\d+)%").find(output) ?: return null
-        return match.groupValues[1].toIntOrNull()
+        if (hasBrightnessctl) {
+            val output = Shell.run("brightnessctl", "-m") ?: return null
+            val match = Regex("(\\d+)%").find(output) ?: return null
+            return match.groupValues[1].toIntOrNull()
+        }
+        return gnomeBrightness()
+    }
+
+    private fun gnomeBrightness(): Int? {
+        val output = Shell.run(
+            "busctl", "--user", "get-property",
+            "org.gnome.SettingsDaemon.Power",
+            "/org/gnome/SettingsDaemon/Power",
+            "org.gnome.SettingsDaemon.Power.Screen",
+            "Brightness",
+        ) ?: return null
+        return Regex("i\\s+(\\d+)").find(output)?.groupValues?.get(1)?.toIntOrNull()
     }
 
     private fun wifiEnabled(): Boolean? {
