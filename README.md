@@ -19,8 +19,9 @@ Desktop dan Material 3 Expressive.
   tidak perlu membuka expanded.
 - **Clipboard**: riwayat teks di memori, klik untuk menyalin ulang, plus
   switch "Recording" untuk menjeda/melanjutkan penangkapan.
-- **Shelf**: tarik file ke island, lihat thumbnail gambar, lalu tarik lagi
-  keluar ke file manager (drag-out XDND) atau buka/hapus dari panel.
+- **Shelf**: tarik file ke island. Gambar dan video tampil sebagai thumbnail
+  besar; file lain tampil sebagai nama + ikon. Tombol open/delete muncul saat
+  hover, dan item tetap bisa ditarik keluar ke file manager (drag-out XDND).
 - **Fokus**: durasi bisa diketik (jam/menit/detik, tanpa batas 12 jam),
   hitung mundur menampilkan detik dan jam selesai; tampil besar di peek
   selama sesi berjalan.
@@ -29,9 +30,12 @@ Desktop dan Material 3 Expressive.
   (tanpa label "On/Off").
 - **Power menu** di header expanded: suspend, reboot, shutdown — dengan
   konfirmasi.
-- **Notifikasi** lewat IPC (`islanddesk notify`): saat collapsed seluruh isi
-  island diganti pesan notifikasi, saat peek muncul di baris bawah, dan saat
-  expanded muncul sebagai banner di atas modul aktif.
+- **Notifikasi**: island mengambil alih `org.freedesktop.Notifications`, jadi
+  popup bawaan desktop berhenti dan semua notifikasi aplikasi tampil di sini.
+  Saat collapsed island membesar jadi kartu 384x100 (nama aplikasi, judul,
+  isi, tombol tutup), saat peek muncul di baris bawah, saat expanded jadi
+  banner di atas modul aktif. Bisa dimatikan di Settings → Behaviour.
+  Notifikasi dari IPC tetap ada: `islanddesk notify "..."`.
 - **Pengaturan** di dalam island: tema System/Light/Dark, lima aksen preset
   plus input HEX kustom, reduce motion, DND, autostart, shrink over
   maximized, monitor, jeda hover/tutup, About (versi, lisensi, GitHub), dan
@@ -146,8 +150,9 @@ Keputusan desain ada di `docs/design-notes.md`.
 
 - Wayland native belum didukung; AWT berjalan lewat XWayland.
 - Click-through memakai XShape, jadi hanya berlaku di X11/XWayland.
-- Notifikasi sistem (dari aplikasi lain) belum dibaca; notifikasi island
-  berasal dari IPC.
+- Pengambilalihan notifikasi butuh helper notifikasi GNOME
+  (`org.gnome.Shell.Notifications`); desktop lain memakai mekanisme sendiri
+  dan saat ini ditolak dengan aman (notifikasi asli dibiarkan hidup).
 - Tray icon di GNOME butuh ekstensi AppIndicator.
 - Clipboard dan shelf belum persisten.
 - Timer fokus berhenti saat aplikasi ditutup.

@@ -1,5 +1,7 @@
 [versions]
 androidx-lifecycle = "2.11.0"
+dbus-java = "5.2.2"
+slf4j = "2.0.17"
 composeMultiplatform = "1.13.0-alpha02"
 jna = "5.17.0"
 junit = "4.13.2"
@@ -24,6 +26,9 @@ kotlinx-coroutinesSwing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-s
 kotlinx-coroutinesCore = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 kotlinx-serializationJson = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
+dbus-java-core = { module = "com.github.hypfvieh:dbus-java-core", version.ref = "dbus-java" }
+dbus-java-native = { module = "com.github.hypfvieh:dbus-java-transport-native-unixsocket", version.ref = "dbus-java" }
+slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
 
 [plugins]
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }

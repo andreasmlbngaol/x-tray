@@ -93,11 +93,11 @@ fun PeekContent(
     Row(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = 20.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        PeekClock(clock = clock, modifier = Modifier.width(74.dp))
+        PeekClock(clock = clock, speed = services.networkSpeed, modifier = Modifier.width(74.dp))
 
         Box(
             modifier = Modifier
@@ -173,7 +173,9 @@ fun PeekContent(
 
             when {
                 notification != null -> PeekNotification(
-                    message = notification.message,
+                    appName = notification.appName,
+                    title = notification.headline,
+                    body = notification.detail,
                     onDismiss = { services.notifications.dismiss() },
                 )
                 activity != null -> Text(
@@ -381,7 +383,12 @@ private fun PeekTransport(
 }
 
 @Composable
-private fun PeekNotification(message: String, onDismiss: () -> Unit) {
+private fun PeekNotification(
+    appName: String,
+    title: String,
+    body: String,
+    onDismiss: () -> Unit,
+) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -400,13 +407,23 @@ private fun PeekNotification(message: String, onDismiss: () -> Unit) {
                 contentDescription = null,
                 modifier = Modifier.size(13.dp),
             )
-            Text(
-                text = message,
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = appName + " · " + title,
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (body.isNotBlank()) {
+                    Text(
+                        text = body,
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
             Text(
                 text = "Dismiss",
                 style = MaterialTheme.typography.labelSmall,

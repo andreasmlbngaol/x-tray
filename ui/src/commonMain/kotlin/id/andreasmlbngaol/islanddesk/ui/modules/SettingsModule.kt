@@ -179,6 +179,14 @@ class SettingsModule(private val services: IslandServices) : IslandModule {
                     },
                 )
                 SwitchRow(
+                    title = "Replace system notifications",
+                    subtitle = "Stops GNOME's own popups; every notification lands here",
+                    checked = settings.replaceSystemNotifications,
+                    onCheckedChange = { value ->
+                        services.settings.update { it.copy(replaceSystemNotifications = value) }
+                    },
+                )
+                SwitchRow(
                     title = "Start at login",
                     subtitle = "Writes an XDG autostart entry",
                     checked = services.autostart.isEnabled(),

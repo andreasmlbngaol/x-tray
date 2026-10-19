@@ -206,6 +206,35 @@ $ islanddesk quit       -> ok
 
 ## Drag and drop
 
+### Notifikasi sistem (`org.freedesktop.Notifications`)
+
+IslandDesk mengekspor objek D-Bus di `/org/freedesktop/Notifications` lewat
+`dbus-java` (core + transport native unixsocket, tanpa JNI tambahan) dan
+meminta nama `org.freedesktop.Notifications`.
+
+GNOME memegang nama itu di proses helper kecil
+(`/usr/bin/gjs -m /usr/share/gnome-shell/org.gnome.Shell.Notifications`) yang
+**tidak** mengizinkan penggantian (`RequestName` dengan REPLACE_EXISTING
+dijawab `EXISTS`). Karena itu alurnya:
+
+1. Coba `RequestName`. Kalau berhasil, selesai.
+2. Kalau gagal, baca pemilik nama lewat `GetConnectionUnixProcessID` dan
+   periksa `/proc/<pid>/cmdline`. Hanya kalau itu helper GNOME, proses
+   dihentikan (SIGTERM) lalu nama diminta ulang (maks 3 detik).
+3. Pemilik lain (mis. dunst) dibiarkan hidup: IslandDesk melaporkan gagal dan
+   notifikasi asli tetap berjalan.
+
+Saat berhenti, nama dilepas lalu `org.gnome.Shell.Notifications` di-`Ping`.
+Itu memicu aktivasi D-Bus yang menjalankan helper lagi, dan helper baru
+langsung meminta kembali `org.freedesktop.Notifications`. Restart ini sudah
+diuji: setelah `islanddesk quit`, `busctl --user status` menunjukkan proses
+`gjs` memegang nama itu lagi.
+
+Antarmuka yang diekspor: `Notify`, `CloseNotification`, `GetCapabilities`,
+`GetServerInformation` (4 out-arg lewat `DBusSerializable`), plus sinyal
+`NotificationClosed` dan `ActionInvoked`. Kapabilitas yang diiklankan hanya
+`body` dan `body-markup`.
+
 Shelf memakai `Modifier.dragAndDropTarget` dari Compose
 (`androidx.compose.foundation.draganddrop`), bukan `java.awt.dnd.DropTarget`.
 AWT `DropTarget` pada ComposeWindow bertabrakan dengan drag manager Compose,
@@ -302,5 +331,4 @@ Belum / perlu uji tambahan:
 - Uji di sesi X11 native (mesin ini Wayland).
 - Uji drag & drop dari aplikasi Wayland native ke XWayland.
 - Pengukuran beban CPU idle dan saat animasi.
-- Notifikasi sistem dari aplikasi lain (butuh menjadi notification daemon).
 - Persistensi clipboard/shelf bila diinginkan.

@@ -36,6 +36,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -49,6 +51,7 @@ import id.andreasmlbngaol.islanddesk.core.IslandModule
 import id.andreasmlbngaol.islanddesk.core.settings.ThemeMode
 import id.andreasmlbngaol.islanddesk.ui.services.IslandServices
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
@@ -122,8 +125,11 @@ class ControlsModule(private val services: IslandServices) : IslandModule {
                     services.controls.toggleMute()
                     refreshAsync()
                 },
-                onCommit = { percent ->
+                onPreview = { percent ->
                     if (state.muted == true) services.controls.toggleMute()
+                    services.controls.setVolume(percent)
+                },
+                onCommit = { percent ->
                     services.controls.setVolume(percent)
                     refreshAsync()
                 },
@@ -136,6 +142,7 @@ class ControlsModule(private val services: IslandServices) : IslandModule {
                     icon = Icons.Rounded.Brightness6,
                     muted = false,
                     onMuteToggle = null,
+                    onPreview = { percent -> services.controls.setBrightness(percent) },
                     onCommit = { percent ->
                         services.controls.setBrightness(percent)
                         refreshAsync()
@@ -249,10 +256,13 @@ private fun LevelCard(
     icon: ImageVector,
     muted: Boolean,
     onMuteToggle: (() -> Unit)?,
+    onPreview: (Int) -> Unit,
     onCommit: (Int) -> Unit,
 ) {
     var draft by remember { mutableFloatStateOf(value.toFloat()) }
     var dragging by remember { mutableStateOf(false) }
+    var lastSentAt by remember { mutableLongStateOf(0L) }
+    val scope = rememberCoroutineScope()
     LaunchedEffect(value) {
         if (!dragging) draft = value.toFloat()
     }
@@ -303,10 +313,19 @@ private fun LevelCard(
                 onValueChange = { next ->
                     dragging = true
                     draft = next
+                    // Apply while dragging, throttled so we do not spawn a
+                    // process on every frame.
+                    val now = System.currentTimeMillis()
+                    if (now - lastSentAt >= 90L) {
+                        lastSentAt = now
+                        val percent = next.toInt()
+                        scope.launch(Dispatchers.IO) { onPreview(percent) }
+                    }
                 },
                 onValueChangeFinished = {
                     dragging = false
-                    onCommit(draft.toInt())
+                    val percent = draft.toInt()
+                    scope.launch(Dispatchers.IO) { onCommit(percent) }
                 },
                 valueRange = 0f..if (title == "Volume") 150f else 100f,
             )

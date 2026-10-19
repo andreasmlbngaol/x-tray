@@ -344,13 +344,34 @@ Prinsipnya: expressive dipakai pada **titik interaksi** (tekan, pilih, buka), bu
 
 | State | Lebar | Tinggi | Padding | Radius | Catatan |
 |---|---|---|---|---|---|
-| Collapsed | 272 dp | 38 dp | 12 dp horizontal | 19 dp | jam + tanggal + speed + baterai |
+| Collapsed | 288 dp | 38 dp | 20 dp horizontal | 19 dp | jam + tanggal + speed 2 baris + baterai |
+| Notifikasi | 384 dp | 100 dp | 22/18 dp | 30 dp | kartu saat notifikasi muncul di collapsed |
 | Dormant | 120 dp | 6 dp | 0 | 3 dp | garis saat window maximized/fullscreen fokus |
-| Peek | 420 dp | 140 dp | 16 dp | 34 dp | jam HH/MM/ss + tanggal, media + kontrol, baterai, notifikasi/fokus |
-| Expanded | 460 dp | 620 dp | 16 dp | 34 dp | rail modul + konten (tanpa footer) |
-| Tab menempel | sama | sama | sama | atas 0, bawah 32 dp, fillet 10 dp | default layar tanpa notch |
+| Peek | 420 dp | 140 dp | 20 dp | 34 dp | jam HH/MM/ss + tanggal, media + kontrol, baterai, notifikasi/fokus |
+| Expanded | 460 dp | 620 dp | 20 dp | 34 dp | rail modul + konten (tanpa footer) |
+| Tab menempel | sama | sama | sama | atas 0, bawah 32 dp, fillet 12 dp | default layar tanpa notch |
 
 Angka ini adalah titik awal, bukan final. Akan divalidasi di Fase 1 pada layar 1080p/1440p dan skala fractional GNOME.
+
+**Bentuk menempel ke atas.** `IslandShape` menggambar satu path: tepi atas penuh
+di `y = 0`, lalu dua bahu konkaf (`quadraticTo(fillet, 0, fillet, fillet)`) yang
+menyempit ke badan, dan sudut bawah membulat. Hasilnya island terlihat tumbuh
+dari tepi atas layar, bukan squircle yang mengambang:
+
+```
+-\          /-
+  ==========
+```
+
+Karena bahu memakan 12 dp, padding konten minimal 20 dp supaya teks tidak
+menempel ke lengkungan. Satu `Shape` dipakai untuk semua state, jadi morph
+collapsed → peek → expanded tidak mengganti siluet di tengah animasi.
+
+**Kartu notifikasi.** Notifikasi di collapsed memakai ukuran sendiri
+(384x100 dp) alih-alih memaksa teks ke bar 38 dp. Isinya nama aplikasi
+(9 sp, warna primary), judul (titleSmall, maks 2 baris), isi (bodySmall, maks
+2 baris), dan tombol tutup. Transisi masuk/keluar memakai crossfade 240 ms
+tanpa scale, supaya tidak ada komponen yang "meletup" hilang.
 
 ### 5.2 Tiga level informasi
 

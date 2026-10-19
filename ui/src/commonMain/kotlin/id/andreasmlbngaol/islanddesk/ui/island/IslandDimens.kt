@@ -18,10 +18,21 @@ object IslandDimens {
     val WindowTopPadding = 0.dp
 
     val Collapsed = IslandSize(
-        width = 272.dp,
+        width = 288.dp,
         height = 38.dp,
         bottomRadius = 19.dp,
-        filletRadius = 8.dp,
+        filletRadius = 12.dp,
+    )
+
+    /**
+     * Notification card: wider and taller than the collapsed bar so a sender,
+     * a title and a couple of body lines fit without truncating to one word.
+     */
+    val Notification = IslandSize(
+        width = 384.dp,
+        height = 100.dp,
+        bottomRadius = 30.dp,
+        filletRadius = 12.dp,
     )
 
     /**

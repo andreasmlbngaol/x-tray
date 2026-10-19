@@ -43,6 +43,7 @@ import id.andreasmlbngaol.islanddesk.platform.ipc.IpcServer
 import id.andreasmlbngaol.islanddesk.platform.ipc.sendIpc
 import id.andreasmlbngaol.islanddesk.platform.media.BusctlMediaSource
 import id.andreasmlbngaol.islanddesk.platform.network.SysfsNetworkSpeedSource
+import id.andreasmlbngaol.islanddesk.platform.notifications.DbusNotificationServer
 import id.andreasmlbngaol.islanddesk.platform.settings.SettingsFile
 import id.andreasmlbngaol.islanddesk.platform.system.ShellPowerControls
 import id.andreasmlbngaol.islanddesk.platform.system.ShellSystemControls
@@ -232,6 +233,29 @@ private fun ApplicationScope.IslandDeskApp() {
         }
     }
 
+    // The island can host org.freedesktop.Notifications itself. GNOME keeps
+    // that name on a small helper process which does not allow replacement, so
+    // taking over means stopping it; stop() pings the helper's own bus name to
+    // start it again when IslandDesk exits.
+    val replaceNotifications = settings.current.replaceSystemNotifications
+    DisposableEffect(replaceNotifications) {
+        if (replaceNotifications) {
+            val started = services.notificationServer.start(
+                onNotification = { incoming ->
+                    SwingUtilities.invokeLater {
+                        if (!services.settings.current.doNotDisturb) {
+                            services.notifications.push(incoming.appName, incoming.title, incoming.body)
+                            visible = true
+                        }
+                    }
+                },
+                onClosed = { SwingUtilities.invokeLater { services.notifications.dismiss() } },
+            )
+            Log.i("notification daemon started=" + started)
+        }
+        onDispose { services.notificationServer.stop() }
+    }
+
     DisposableEffect(Unit) {
         val server = IpcServer(AppPaths.socket) { command ->
             handleCommand(
@@ -327,6 +351,26 @@ private fun ApplicationScope.IslandDeskApp() {
         // LaunchedEffect keyed on state: while the window is hidden Compose may
         // stop requesting frames, so a keyed effect would never run again and
         // `islanddesk show` could not bring the island back.
+        // While hidden the window receives no pointer events, so the only way
+        // back is to watch the global pointer: once it has left the island and
+        // then touches the top edge inside the island's span, show it again.
+        LaunchedEffect(visible) {
+            if (visible) return@LaunchedEffect
+            var armed = false
+            while (!visible) {
+                val pointer = runCatching { java.awt.MouseInfo.getPointerInfo()?.location }.getOrNull()
+                if (pointer != null) {
+                    val insideX = pointer.x in window.x..(window.x + window.width)
+                    val inside = insideX && pointer.y in window.y..(window.y + window.height)
+                    if (!armed && !inside) armed = true
+                    if (armed && insideX && pointer.y <= window.y + 1) {
+                        visible = true
+                    }
+                }
+                delay(80L)
+            }
+        }
+
         LaunchedEffect(Unit) {
             while (true) {
                 if (window.isVisible != visible) {
@@ -358,6 +402,10 @@ private fun ApplicationScope.IslandDeskApp() {
                 onStateChange = {
                     islandState = it
                     Log.i("state=" + it)
+                },
+                onRequestHide = {
+                    visible = false
+                    Log.i("island hidden by right click")
                 },
                 onGeometryChanged = { geometry ->
                     window.setSize(geometry.windowWidthPx, geometry.windowHeightPx)
@@ -398,6 +446,7 @@ private fun createServices(settings: SettingsStore): IslandServices = IslandServ
     fileOpener = DesktopFileOpener(),
     network = SysfsNetworkSpeedSource(),
     power = ShellPowerControls(),
+    notificationServer = DbusNotificationServer(),
 )
 
 private fun handleCommand(
@@ -438,7 +487,7 @@ private fun handleCommand(
             "suppressed"
         } else {
             SwingUtilities.invokeLater {
-                services.notifications.push(command.message)
+                services.notifications.push("IslandDesk", "", command.message)
                 setVisible(true)
             }
             "ok"

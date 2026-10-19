@@ -33,6 +33,8 @@ data class IslandSettings(
     val controlsEnabled: Boolean = true,
     val focusSeconds: Int = 1_500,
     val hideOverMaximized: Boolean = true,
+    /** Hosts org.freedesktop.Notifications so the OS stops drawing its own popups. */
+    val replaceSystemNotifications: Boolean = true,
 ) {
     /** Keeps values inside sane bounds even if the file was edited by hand. */
     fun normalized(): IslandSettings = copy(

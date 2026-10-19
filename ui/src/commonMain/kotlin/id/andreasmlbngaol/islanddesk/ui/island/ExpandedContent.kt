@@ -64,7 +64,7 @@ fun ExpandedContent(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = clock.time,
+                text = clock.time + ":" + clock.seconds,
                 style = MaterialTheme.typography.titleMediumEmphasized.copy(fontFeatureSettings = "tnum"),
             )
             Spacer(Modifier.width(8.dp))
@@ -73,6 +73,8 @@ fun ExpandedContent(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Spacer(Modifier.width(10.dp))
+            SpeedReadout(speed = services.networkSpeed, fontSize = 10.sp)
             Spacer(Modifier.weight(1f))
             PowerMenu(services = services)
         }
@@ -93,7 +95,7 @@ fun ExpandedContent(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .padding(16.dp),
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 if (notification != null) {

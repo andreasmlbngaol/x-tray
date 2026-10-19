@@ -124,7 +124,7 @@ class FocusModule(private val services: IslandServices) : IslandModule {
                 nowMs = System.currentTimeMillis()
                 if (!notified && nowMs >= activity.startedAtMs + activity.durationMs) {
                     notified = true
-                    services.notifications.push("Focus session complete")
+                    services.notifications.push("Focus", "Session complete", activity.title + " has finished.")
                 }
                 delay(250L)
             }

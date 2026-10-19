@@ -2,6 +2,7 @@ package id.andreasmlbngaol.islanddesk.ui.island
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -36,6 +37,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.DragData
@@ -78,6 +82,7 @@ fun IslandDesk(
     dormant: Boolean = false,
     onStateChange: (IslandState) -> Unit = {},
     onGeometryChanged: (IslandGeometry) -> Unit = {},
+    onRequestHide: () -> Unit = {},
 ) {
     val settings = services.settings.current
     val config = remember(settings.hoverIntentMs, settings.collapseDelayMs) {
@@ -207,7 +212,15 @@ fun IslandDesk(
     // While a file hovers the island it opens peek to show a proper drop zone
     // instead of only tinting the border.
     val visualState = if (isDragOver && state == IslandState.Collapsed) IslandState.Peek else state
-    val target = if (dormantNow) IslandDimens.Dormant else IslandDimens.forState(visualState)
+    // A notification grows the collapsed bar into a card, like peek, so the
+    // sender, title and body all fit.
+    val notification = services.notifications.current
+    val showNotification = !dormantNow && state == IslandState.Collapsed && notification != null
+    val target = when {
+        dormantNow -> IslandDimens.Dormant
+        showNotification -> IslandDimens.Notification
+        else -> IslandDimens.forState(visualState)
+    }
     val motion = MaterialTheme.motionScheme
     val reduceMotion = LocalReduceMotion.current || settings.reduceMotion
     val spatialSpec = remember(motion, state, reduceMotion) {
@@ -245,8 +258,8 @@ fun IslandDesk(
     val isDarkSurface = MaterialTheme.colorScheme.surface.luminance() < 0.5f
 
     val density = LocalDensity.current
-    LaunchedEffect(visualState, dormantNow) {
-        val size = if (dormantNow) IslandDimens.Dormant else IslandDimens.forState(visualState)
+    LaunchedEffect(target) {
+        val size = target
         val windowWidth = with(density) { IslandDimens.windowWidth(size).roundToPx() }
         val windowHeight = with(density) { IslandDimens.windowHeight(size).roundToPx() }
         onGeometryChanged(
@@ -310,6 +323,18 @@ fun IslandDesk(
                         shouldStartDragAndDrop = { event -> event.dragData() is DragData.FilesList },
                         target = dropTarget,
                     )
+                    // Right click tucks the island away; Main brings it back
+                    // when the pointer reaches the top edge again.
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
+                                    onRequestHide()
+                                }
+                            }
+                        }
+                    }
                     .clickable(
                         interactionSource = interactionSource,
                         indication = null,
@@ -319,7 +344,11 @@ fun IslandDesk(
                         hoverEpoch++
                     },
             ) {
-                val contentKey = if (dormantNow) "dormant" else visualState.name
+                val contentKey = when {
+                    dormantNow -> "dormant"
+                    showNotification -> "notification"
+                    else -> visualState.name
+                }
                 if (reduceMotion) {
                     Crossfade(
                         targetState = contentKey,
@@ -338,9 +367,12 @@ fun IslandDesk(
                 } else {
                     AnimatedContent(
                         targetState = contentKey,
+                        // A long, eased crossfade with no scale: the previous
+                        // 180 ms scale made the leaving content pop out of
+                        // existence before the new layout settled.
                         transitionSpec = {
-                            (fadeIn(tween(180)) + scaleIn(initialScale = 0.97f)) togetherWith
-                                (fadeOut(tween(120)) + scaleOut(targetScale = 0.99f))
+                            (fadeIn(tween(240, delayMillis = 40)) togetherWith fadeOut(tween(150)))
+                                .using(SizeTransform(clip = false))
                         },
                         label = "islandState",
                     ) { current ->
@@ -368,6 +400,16 @@ private fun IslandKeyContent(
     dropActive: Boolean,
     onSelectModule: (String) -> Unit,
 ) {
+    if (key == "notification") {
+        val notification = services.notifications.current
+        if (notification != null) {
+            NotificationContent(
+                notification = notification,
+                onDismiss = { services.notifications.dismiss() },
+            )
+        }
+        return
+    }
     if (key == "dormant") {
         Box(
             modifier = Modifier.fillMaxSize(),

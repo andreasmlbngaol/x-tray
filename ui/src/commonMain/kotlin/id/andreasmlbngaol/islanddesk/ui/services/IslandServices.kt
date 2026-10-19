@@ -18,6 +18,7 @@ import id.andreasmlbngaol.islanddesk.platform.media.MediaSource
 import id.andreasmlbngaol.islanddesk.platform.media.MediaTrack
 import id.andreasmlbngaol.islanddesk.platform.network.NetworkSpeed
 import id.andreasmlbngaol.islanddesk.platform.network.NetworkSpeedSource
+import id.andreasmlbngaol.islanddesk.platform.notifications.SystemNotificationServer
 import id.andreasmlbngaol.islanddesk.platform.system.PowerControls
 import id.andreasmlbngaol.islanddesk.platform.system.SystemControls
 import id.andreasmlbngaol.islanddesk.platform.system.SystemState
@@ -40,6 +41,7 @@ class IslandServices(
     val fileOpener: FileOpener,
     val network: NetworkSpeedSource,
     val power: PowerControls,
+    val notificationServer: SystemNotificationServer,
 ) {
     var batteryState: BatteryState by mutableStateOf(BatteryState())
     var mediaTrack: MediaTrack? by mutableStateOf(null)
