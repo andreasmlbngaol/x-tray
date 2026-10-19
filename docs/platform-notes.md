@@ -133,38 +133,112 @@ Wayland native.
 ## Fokus dan fullscreen
 
 - `isAutoRequestFocus = false` mencegah window merebut fokus saat muncul.
-- Deteksi window fullscreen (auto-hide) belum diimplementasikan; perlu
-  membaca `_NET_ACTIVE_WINDOW` / `_NET_WM_STATE_FULLSCREEN` lewat X11.
-- DND (do-not-disturb) dan multi-monitor belum diimplementasikan; saat ini
-  island selalu di monitor utama.
+- Auto-hide fullscreen memakai polling 2 detik: `_NET_ACTIVE_WINDOW` di
+  root, lalu cek `_NET_WM_STATE_FULLSCREEN` pada window aktif. Polling
+  dipilih karena listener X11 event membutuhkan event loop sendiri; bebannya
+  satu query ringan per 2 detik.
+- DND diterapkan sebagai preferensi: hover tidak membuka panel dan
+  `islanddesk notify` dijawab `suppressed`.
+- Multi-monitor: `DisplayInfo.screens()` membaca semua `ScreenDevice`;
+  `monitorIndex` di pengaturan menentukan layar tujuan. Posisi dihitung dari
+  usable bounds monitor tersebut.
+
+## Click-through dengan XShape
+
+`X11Window.applyInputRegion()` memanggil `XShapeCombineRectangles` dengan
+`ShapeInput` (2), `ShapeSet` (0). Region dibentuk dari 24 strip horizontal
+yang mengikuti radius bawah island; area di luar region meneruskan klik ke
+window di bawahnya.
+
+Catatan:
+
+- Window dicari lewat `_NET_CLIENT_LIST` + `_NET_WM_PID`, dengan fallback
+  ke `WM_NAME` = `IslandDesk`. Pendekatan ini menghindari refleksi ke
+  `sun.awt` yang diblokir module system Java 21.
+- Region diperbarui saat state berubah (ukuran target), bukan setiap frame
+  animasi. Selama ~300 ms transisi, area input masih memakai ukuran lama.
+- Padding transparan 12 dp di kiri/kanan dan bawah tidak lagi menangkap klik.
+- XShape hanya berlaku pada X11/XWayland. Wayland native memerlukan
+  protokol input region sendiri.
+
+## EWMH
+
+Setelah window tampil, aplikasi menulis:
+
+- `_NET_WM_WINDOW_TYPE` = `_NET_WM_WINDOW_TYPE_UTILITY`
+- `_NET_WM_STATE` = ABOVE, SKIP_TASKBAR, SKIP_PAGER, STICKY
+
+GNOME menerima hint ini; window tidak muncul di alt-tab/taskbar. Beberapa
+window manager hanya membaca `_NET_WM_STATE` saat map, jadi aplikasi
+mengulang penulisan 6 kali dengan jeda 250 ms setelah window dibuat.
+
+## IPC dan single instance
+
+- Socket: `$XDG_RUNTIME_DIR/islanddesk.sock` (fallback ke temp dir bila
+  variabel tidak ada).
+- Protokol: satu baris perintah, satu baris balasan.
+- Lock: `FileChannel.tryLock()` pada `~/.config/islanddesk/instance.lock`.
+  Proses kedua meneruskan `show` lalu keluar.
+
+Diuji langsung di sesi ini:
+
+```text
+$ islanddesk state      -> Collapsed
+$ islanddesk toggle     -> ok
+$ islanddesk state      -> Expanded
+$ islanddesk notify ... -> ok
+$ islanddesk quit       -> ok
+```
+
+## Tray dan autostart
+
+- Tray memakai `java.awt.SystemTray` dengan menu Buka/Ciutkan/DND/Keluar.
+  Di GNOME tray hanya terlihat bila ekstensi AppIndicator aktif; kegagalan
+  tidak membuat aplikasi berhenti.
+- Autostart menulis `~/.config/autostart/islanddesk.desktop`. `Exec`
+  memakai `ISLANDDESK_EXEC`, lalu `/opt/islanddesk/bin/islanddesk`, lalu
+  perintah proses saat ini.
+
+## Logging
+
+Log ditulis ke stdout dan ke `~/.local/state/islanddesk/islanddesk.log`.
+Berkas dipotong (ditimpa kosong) saat melewati 1 MB. `ISLANDDESK_DEBUG=1`
+menambahkan log debug dan stack trace.
 
 ## Perintah verifikasi yang dipakai
 
 ```bash
-./gradlew :core:jvmTest
+./gradlew :core:jvmTest :platform:jvmTest
 ./gradlew :app:run
 ISLANDDESK_DEMO=cycle ./gradlew :app:run
 ISLANDDESK_RENDER_API=OPENGL ./gradlew :app:run
+./gradlew :app:run --args='state'
+./gradlew :app:packageDeb
 wmctrl -l
 xwininfo -id <window-id>
 xprop -id <window-id>
 jstack <pid>
 ```
 
-## Status Fase 1
+## Status implementasi
 
-Terpenuhi:
+Sudah berjalan:
 
-- Window transparan, undecorated, always-on-top di tengah atas.
-- Tiga level (collapsed/peek/expanded) dengan ukuran dan radius berbeda.
-- Transisi berjalan mulus dan tidak memblokir event loop (dengan renderer
-  software di Wayland).
-- Hover intent, delay collapse, Esc, dan klik bekerja.
-- Unit test state machine lulus (7 test).
+- Window transparan, undecorated, always-on-top, utility/skip-taskbar.
+- Tiga level dengan morphing shape dan spring motion.
+- Hover intent, delay collapse, Esc, klik, DND.
+- Click-through XShape di luar bentuk island.
+- MPRIS lewat `busctl`, clipboard AWT, shelf drag & drop, timer fokus,
+  kontrol sistem, pengaturan JSON.
+- IPC Unix socket + CLI + single instance + tray + autostart.
+- Auto-hide fullscreen, pemilihan monitor.
+- Unit test: state machine, settings, clipboard, shelf, activity, IPC, parser
+  MPRIS.
 
-Belum:
+Belum / perlu uji tambahan:
 
-- Click-through di luar bentuk island (Fase 2).
-- Auto-hide fullscreen, DND, multi-monitor (Fase 2+).
-- Pengukuran beban CPU saat idle dan saat animasi.
-- Uji di sesi X11 native (tidak tersedia di mesin ini).
+- Uji di sesi X11 native (mesin ini Wayland).
+- Uji drag & drop dari aplikasi Wayland native ke XWayland.
+- Pengukuran beban CPU idle dan saat animasi.
+- Notifikasi sistem dari aplikasi lain (butuh menjadi notification daemon).
+- Persistensi clipboard/shelf bila diinginkan.
