@@ -8,8 +8,10 @@ package id.andreasmlbngaol.islanddesk.core
  * makes it deterministic and unit-testable.
  */
 class IslandStateMachine(
-    private val config: IslandConfig = IslandConfig(),
+    config: IslandConfig = IslandConfig(),
 ) {
+    /** Updated live when the user changes timing preferences. */
+    var config: IslandConfig = config
     var state: IslandState = IslandState.Collapsed
         private set
 

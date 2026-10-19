@@ -1,0 +1,37 @@
+package id.andreasmlbngaol.islanddesk.core.activity
+
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+class LiveActivityTest {
+    @Test
+    fun countsDownWithInjectedClock() {
+        var now = 1_000L
+        val controller = LiveActivityController { now }
+        controller.start("Tulis", minutes = 1)
+        assertEquals(60_000L, controller.remainingMs())
+        assertEquals(0f, controller.progress())
+
+        now += 30_000L
+        assertEquals(30_000L, controller.remainingMs())
+        assertEquals(0.5f, controller.progress())
+
+        now += 30_000L
+        assertEquals(0L, controller.remainingMs())
+        assertTrue(controller.isFinished())
+
+        controller.stop()
+        assertNull(controller.current)
+        assertFalse(controller.isFinished())
+    }
+
+    @Test
+    fun formatsMinutesAndSeconds() {
+        assertEquals("25:00", LiveActivityController.format(25 * 60_000L))
+        assertEquals("00:01", LiveActivityController.format(1L))
+        assertEquals("00:00", LiveActivityController.format(-5L))
+    }
+}
