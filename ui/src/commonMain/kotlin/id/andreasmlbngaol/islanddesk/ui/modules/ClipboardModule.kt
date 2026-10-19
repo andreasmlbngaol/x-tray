@@ -14,6 +14,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.Icon
@@ -23,6 +24,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -75,6 +82,13 @@ class ClipboardModule(private val services: IslandServices) : IslandModule {
         val limit = services.settings.current.clipboardMaxItems
         val items = services.clipboardHistory.items().take(limit)
         val recording = !services.clipboardPaused
+        var copied by remember { mutableStateOf<String?>(null) }
+        LaunchedEffect(copied) {
+            if (copied != null) {
+                delay(1_400L)
+                copied = null
+            }
+        }
 
         Column(modifier = Modifier.fillMaxSize()) {
             Row(
@@ -143,14 +157,19 @@ class ClipboardModule(private val services: IslandServices) : IslandModule {
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items.forEach { entry ->
+                        val justCopied = copied == entry.text
                         Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    services.clipboard.copy(entry.text)
-                                },
+                            onClick = {
+                                services.clipboard.copy(entry.text)
+                                copied = entry.text
+                            },
+                            modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainerLow,
+                            color = if (justCopied) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surfaceContainerLow
+                            },
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
@@ -164,12 +183,25 @@ class ClipboardModule(private val services: IslandServices) : IslandModule {
                                     tint = MaterialTheme.colorScheme.primary,
                                 )
                                 Text(
-                                    text = ClipboardHistory.preview(entry.text),
+                                    text = if (justCopied) "Copied to clipboard" else ClipboardHistory.preview(entry.text),
                                     style = MaterialTheme.typography.bodySmall,
+                                    color = if (justCopied) {
+                                        MaterialTheme.colorScheme.onPrimaryContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface
+                                    },
                                     modifier = Modifier.weight(1f),
                                     maxLines = 2,
                                     overflow = TextOverflow.Ellipsis,
                                 )
+                                if (justCopied) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.CheckCircle,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                        tint = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
                                 IconButton(
                                     onClick = {
                                         services.clipboardHistory.remove(entry.text)

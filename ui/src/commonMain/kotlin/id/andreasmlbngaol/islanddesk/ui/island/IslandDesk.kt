@@ -49,6 +49,7 @@ import id.andreasmlbngaol.islanddesk.core.IslandState
 import id.andreasmlbngaol.islanddesk.core.IslandStateMachine
 import id.andreasmlbngaol.islanddesk.core.IslandStateRequest
 import id.andreasmlbngaol.islanddesk.core.geometry.IslandGeometry
+import id.andreasmlbngaol.islanddesk.platform.files.normalizeDroppedPath
 import id.andreasmlbngaol.islanddesk.ui.modules.ModuleCatalog
 import id.andreasmlbngaol.islanddesk.ui.services.IslandServices
 import id.andreasmlbngaol.islanddesk.ui.theme.LocalReduceMotion
@@ -74,6 +75,7 @@ fun IslandDesk(
     modifier: Modifier = Modifier,
     stateRequest: IslandStateRequest? = null,
     initialModuleId: String? = null,
+    dormant: Boolean = false,
     onStateChange: (IslandState) -> Unit = {},
     onGeometryChanged: (IslandGeometry) -> Unit = {},
 ) {
@@ -140,7 +142,11 @@ fun IslandDesk(
 
             override fun onDrop(event: DragAndDropEvent): Boolean {
                 isDragOver = false
-                val files = (event.dragData() as? DragData.FilesList)?.readFiles().orEmpty()
+                val files = (event.dragData() as? DragData.FilesList)
+                    ?.readFiles()
+                    ?.map { normalizeDroppedPath(it) }
+                    ?.filter { it.isNotBlank() }
+                    .orEmpty()
                 if (files.isEmpty()) return false
                 services.shelf.add(files, System.currentTimeMillis())
                 services.bump()
@@ -195,7 +201,13 @@ fun IslandDesk(
         }
     }
 
-    val target = IslandDimens.forState(state)
+    // A focused maximized/fullscreen window shrinks the island to a hairline
+    // instead of hiding it, so it never covers the window but stays reachable.
+    val dormantNow = dormant && state == IslandState.Collapsed && !isDragOver
+    // While a file hovers the island it opens peek to show a proper drop zone
+    // instead of only tinting the border.
+    val visualState = if (isDragOver && state == IslandState.Collapsed) IslandState.Peek else state
+    val target = if (dormantNow) IslandDimens.Dormant else IslandDimens.forState(visualState)
     val motion = MaterialTheme.motionScheme
     val reduceMotion = LocalReduceMotion.current || settings.reduceMotion
     val spatialSpec = remember(motion, state, reduceMotion) {
@@ -233,8 +245,8 @@ fun IslandDesk(
     val isDarkSurface = MaterialTheme.colorScheme.surface.luminance() < 0.5f
 
     val density = LocalDensity.current
-    LaunchedEffect(state) {
-        val size = IslandDimens.forState(state)
+    LaunchedEffect(visualState, dormantNow) {
+        val size = if (dormantNow) IslandDimens.Dormant else IslandDimens.forState(visualState)
         val windowWidth = with(density) { IslandDimens.windowWidth(size).roundToPx() }
         val windowHeight = with(density) { IslandDimens.windowHeight(size).roundToPx() }
         onGeometryChanged(
@@ -263,6 +275,7 @@ fun IslandDesk(
                     .height(height)
                     .shadow(
                         elevation = when {
+                            dormantNow -> 2.dp
                             state == IslandState.Collapsed -> if (isDarkSurface) 6.dp else 10.dp
                             else -> if (isDarkSurface) 16.dp else 22.dp
                         },
@@ -279,7 +292,11 @@ fun IslandDesk(
                         )
                     )
                     .border(
-                        width = if (isDragOver) 2.dp else 1.dp,
+                        width = when {
+                            dormantNow -> 0.dp
+                            isDragOver -> 2.dp
+                            else -> 1.dp
+                        },
                         color = if (isDragOver) {
                             MaterialTheme.colorScheme.primary
                         } else {
@@ -302,34 +319,37 @@ fun IslandDesk(
                         hoverEpoch++
                     },
             ) {
+                val contentKey = if (dormantNow) "dormant" else visualState.name
                 if (reduceMotion) {
                     Crossfade(
-                        targetState = state,
+                        targetState = contentKey,
                         animationSpec = snap(),
                         label = "islandState",
                     ) { current ->
-                        IslandStateContent(
-                            state = current,
+                        IslandKeyContent(
+                            key = current,
                             services = services,
                             modules = modules,
                             activeModule = activeModule,
+                            dropActive = isDragOver,
                             onSelectModule = { activeModuleId = it },
                         )
                     }
                 } else {
                     AnimatedContent(
-                        targetState = state,
+                        targetState = contentKey,
                         transitionSpec = {
                             (fadeIn(tween(180)) + scaleIn(initialScale = 0.97f)) togetherWith
                                 (fadeOut(tween(120)) + scaleOut(targetScale = 0.99f))
                         },
                         label = "islandState",
                     ) { current ->
-                        IslandStateContent(
-                            state = current,
+                        IslandKeyContent(
+                            key = current,
                             services = services,
                             modules = modules,
                             activeModule = activeModule,
+                            dropActive = isDragOver,
                             onSelectModule = { activeModuleId = it },
                         )
                     }
@@ -340,16 +360,53 @@ fun IslandDesk(
 }
 
 @Composable
+private fun IslandKeyContent(
+    key: String,
+    services: IslandServices,
+    modules: List<id.andreasmlbngaol.islanddesk.core.IslandModule>,
+    activeModule: id.andreasmlbngaol.islanddesk.core.IslandModule?,
+    dropActive: Boolean,
+    onSelectModule: (String) -> Unit,
+) {
+    if (key == "dormant") {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(46.dp)
+                    .height(2.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
+                    ),
+            )
+        }
+        return
+    }
+    IslandStateContent(
+        state = IslandState.valueOf(key),
+        services = services,
+        modules = modules,
+        activeModule = activeModule,
+        dropActive = dropActive,
+        onSelectModule = onSelectModule,
+    )
+}
+
+@Composable
 private fun IslandStateContent(
     state: IslandState,
     services: IslandServices,
     modules: List<id.andreasmlbngaol.islanddesk.core.IslandModule>,
     activeModule: id.andreasmlbngaol.islanddesk.core.IslandModule?,
+    dropActive: Boolean,
     onSelectModule: (String) -> Unit,
 ) {
     when (state) {
         IslandState.Collapsed -> CollapsedContent(services = services)
-        IslandState.Peek -> PeekContent(services = services)
+        IslandState.Peek -> PeekContent(services = services, dropActive = dropActive)
         IslandState.Expanded -> ExpandedContent(
             modules = modules,
             activeModule = activeModule,

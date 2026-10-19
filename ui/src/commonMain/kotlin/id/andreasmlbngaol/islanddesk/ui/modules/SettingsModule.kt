@@ -1,11 +1,12 @@
 package id.andreasmlbngaol.islanddesk.ui.modules
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,9 +23,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -49,6 +54,7 @@ import id.andreasmlbngaol.islanddesk.core.settings.ThemeMode
 import id.andreasmlbngaol.islanddesk.platform.DisplayInfo
 import id.andreasmlbngaol.islanddesk.ui.services.IslandServices
 import id.andreasmlbngaol.islanddesk.ui.theme.accentSwatch
+import id.andreasmlbngaol.islanddesk.ui.theme.parseHexColor
 
 class SettingsModule(private val services: IslandServices) : IslandModule {
     override val id = "settings"
@@ -111,18 +117,22 @@ class SettingsModule(private val services: IslandServices) : IslandModule {
                         )
                     }
                 }
+
                 Text(
                     text = "Accent",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     val darkSurface = MaterialTheme.colorScheme.surface.luminance() < 0.5f
                     AccentColor.entries.forEach { accent ->
-                        val selected = settings.accentColor == accent
+                        val selected = settings.accentColor == accent && settings.customAccent.isBlank()
                         Box(
                             modifier = Modifier
-                                .size(30.dp)
+                                .size(28.dp)
                                 .clip(CircleShape)
                                 .background(accentSwatch(accent, darkSurface))
                                 .border(
@@ -131,11 +141,16 @@ class SettingsModule(private val services: IslandServices) : IslandModule {
                                     shape = CircleShape,
                                 )
                                 .clickable {
-                                    services.settings.update { it.copy(accentColor = accent) }
+                                    services.settings.update {
+                                        it.copy(accentColor = accent, customAccent = "")
+                                    }
                                 },
                         )
                     }
                 }
+
+                CustomAccentRow(services = services, current = settings.customAccent)
+
                 SwitchRow(
                     title = "Reduce motion",
                     subtitle = "Snap between states instead of springing",
@@ -156,8 +171,8 @@ class SettingsModule(private val services: IslandServices) : IslandModule {
                     },
                 )
                 SwitchRow(
-                    title = "Hide over maximized windows",
-                    subtitle = "Steps aside when a window fills the screen, so browser tabs stay reachable",
+                    title = "Shrink over maximized windows",
+                    subtitle = "Collapses to a 120x6 hairline so browser tabs stay reachable",
                     checked = settings.hideOverMaximized,
                     onCheckedChange = { value ->
                         services.settings.update { it.copy(hideOverMaximized = value) }
@@ -227,69 +242,152 @@ class SettingsModule(private val services: IslandServices) : IslandModule {
                 )
             }
 
-            Section(title = "Notifications") {
+            Section(title = "About") {
+                Text("IslandDesk 0.1.0", style = MaterialTheme.typography.bodyMedium)
                 Text(
-                    text = "Notifications appear as a banner above the active module " +
-                        "when the island is expanded, and in the peek's bottom row.",
+                    text = "Google Sans Flex under SIL OFL 1.1 · Kotlin " + KotlinVersion.CURRENT,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                TextButton(
-                    onClick = {
-                        services.notifications.push("Test notification from IslandDesk")
-                    },
+                OutlinedButton(
+                    onClick = { services.fileOpener.openUrl("https://github.com/andreasmlbngaol") },
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Send a test notification")
+                    Text("github.com/andreasmlbngaol")
                 }
             }
 
-            Section(title = "About") {
-                Text("IslandDesk 0.1.0", style = MaterialTheme.typography.labelSmall)
-                Text(
-                    text = "Kotlin " + KotlinVersion.CURRENT + " • Compose Multiplatform",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = "Media through MPRIS • controls through PipeWire and NetworkManager",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                var confirmReset by remember { mutableStateOf(false) }
-                TextButton(onClick = { confirmReset = true }) {
-                    Text("Reset all settings")
-                }
-                if (confirmReset) {
-                    AlertDialog(
-                        onDismissRequest = { confirmReset = false },
-                        title = { Text("Reset settings?") },
-                        text = {
-                            Text(
-                                "Theme, accent, delays, toggles and the focus duration " +
-                                    "return to their defaults.",
-                            )
-                        },
-                        confirmButton = {
-                            TextButton(
-                                onClick = {
-                                    val defaults = IslandSettings()
-                                    services.settings.update { defaults }
-                                    services.autostart.setEnabled(defaults.startAtLogin)
-                                    confirmReset = false
-                                },
-                            ) {
-                                Text("Reset")
-                            }
-                        },
-                        dismissButton = {
-                            TextButton(onClick = { confirmReset = false }) {
-                                Text("Cancel")
-                            }
-                        },
+            DangerZone(services = services)
+        }
+    }
+}
+
+@Composable
+private fun CustomAccentRow(services: IslandServices, current: String) {
+    var draft by remember(current) { mutableStateOf(current) }
+    val parsed = parseHexColor(draft)
+    val dirty = draft.trim() != current
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        OutlinedTextField(
+            value = draft,
+            onValueChange = { value -> draft = value.take(7) },
+            modifier = Modifier.weight(1f),
+            label = { Text("Custom hex", style = MaterialTheme.typography.labelSmall) },
+            placeholder = { Text("#1B4B8F", style = MaterialTheme.typography.labelSmall) },
+            singleLine = true,
+            isError = draft.isNotBlank() && parsed == null,
+            trailingIcon = {
+                val preview = parsed
+                if (preview != null) {
+                    Box(
+                        modifier = Modifier
+                            .padding(end = 6.dp)
+                            .size(20.dp)
+                            .clip(CircleShape)
+                            .background(preview),
                     )
+                }
+            },
+        )
+        Button(
+            onClick = {
+                services.settings.update { it.copy(customAccent = draft.trim()) }
+            },
+            enabled = parsed != null && dirty,
+        ) {
+            Text("Apply")
+        }
+        if (current.isNotBlank()) {
+            TextButton(
+                onClick = {
+                    draft = ""
+                    services.settings.update { it.copy(customAccent = "") }
+                },
+            ) {
+                Text("Clear")
+            }
+        }
+    }
+}
+
+@Composable
+private fun DangerZone(services: IslandServices) {
+    var confirmReset by remember { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            text = "Danger zone",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.padding(start = 4.dp),
+        )
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(22.dp),
+            color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text = "Reset all settings",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+                Text(
+                    text = "Theme, accent, delays, toggles and the focus duration return to " +
+                        "their defaults. This cannot be undone.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedButton(
+                    onClick = { confirmReset = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
+                ) {
+                    Text("Reset everything")
                 }
             }
         }
+    }
+
+    if (confirmReset) {
+        AlertDialog(
+            onDismissRequest = { confirmReset = false },
+            title = { Text("Reset every setting?") },
+            text = {
+                Text(
+                    "All preferences go back to defaults and the autostart entry is removed. " +
+                        "There is no undo.",
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val defaults = IslandSettings()
+                        services.settings.update { defaults }
+                        services.autostart.setEnabled(defaults.startAtLogin)
+                        confirmReset = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
+                ) {
+                    Text("Reset everything")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmReset = false }) { Text("Cancel") }
+            },
+        )
     }
 }
 

@@ -26,7 +26,8 @@ import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.PictureAsPdf
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -162,23 +163,33 @@ class ShelfModule(private val services: IslandServices) : IslandModule {
                                         overflow = TextOverflow.Ellipsis,
                                     )
                                 }
-                                IconButton(onClick = { services.fileOpener.open(item.path) }) {
+                                FilledTonalIconButton(
+                                    onClick = { services.fileOpener.open(item.path) },
+                                    modifier = Modifier.size(34.dp),
+                                    shape = RoundedCornerShape(12.dp),
+                                ) {
                                     Icon(
                                         imageVector = Icons.Rounded.OpenInNew,
                                         contentDescription = "Open",
-                                        modifier = Modifier.size(16.dp),
+                                        modifier = Modifier.size(17.dp),
                                     )
                                 }
-                                IconButton(
+                                FilledTonalIconButton(
                                     onClick = {
                                         services.shelf.remove(item.path)
                                         services.bump()
                                     },
+                                    modifier = Modifier.size(34.dp),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f),
+                                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                                    ),
                                 ) {
                                     Icon(
                                         imageVector = Icons.Rounded.Delete,
                                         contentDescription = "Remove",
-                                        modifier = Modifier.size(16.dp),
+                                        modifier = Modifier.size(17.dp),
                                     )
                                 }
                             }

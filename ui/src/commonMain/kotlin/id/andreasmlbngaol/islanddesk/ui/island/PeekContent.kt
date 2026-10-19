@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AddCircle
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.BatteryFull
 import androidx.compose.material.icons.rounded.DoNotDisturbOn
@@ -62,6 +63,7 @@ import kotlinx.coroutines.withContext
 fun PeekContent(
     services: IslandServices,
     modifier: Modifier = Modifier,
+    dropActive: Boolean = false,
 ) {
     val clock = rememberClockText()
     val track = services.mediaTrack
@@ -108,7 +110,9 @@ fun PeekContent(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
-            if (activity != null) {
+            if (dropActive) {
+                DropZone()
+            } else if (activity != null) {
                 FocusHero(
                     activity = activity,
                     remainingMs = (activity.startedAtMs + activity.durationMs - nowMs).coerceAtLeast(0L),
@@ -180,6 +184,40 @@ fun PeekContent(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun DropZone() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
+                shape = RoundedCornerShape(16.dp),
+            )
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.AddCircle,
+            contentDescription = null,
+            modifier = Modifier.size(22.dp),
+            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+        )
+        Column {
+            Text(
+                text = "Drop to add to Shelf",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+            Text(
+                text = "Release the file anywhere on the island",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f),
+            )
         }
     }
 }
@@ -309,34 +347,34 @@ private fun PeekTransport(
         IconButton(
             onClick = onPrevious,
             enabled = enabled,
-            modifier = Modifier.size(26.dp),
+            modifier = Modifier.size(34.dp),
         ) {
             Icon(
                 imageVector = Icons.Rounded.SkipPrevious,
                 contentDescription = "Previous",
-                modifier = Modifier.size(15.dp),
+                modifier = Modifier.size(19.dp),
             )
         }
         FilledIconButton(
             onClick = onPlayPause,
             enabled = enabled,
-            modifier = Modifier.size(28.dp),
+            modifier = Modifier.size(38.dp),
         ) {
             Icon(
                 imageVector = if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                 contentDescription = if (playing) "Pause" else "Play",
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(21.dp),
             )
         }
         IconButton(
             onClick = onNext,
             enabled = enabled,
-            modifier = Modifier.size(26.dp),
+            modifier = Modifier.size(34.dp),
         ) {
             Icon(
                 imageVector = Icons.Rounded.SkipNext,
                 contentDescription = "Next",
-                modifier = Modifier.size(15.dp),
+                modifier = Modifier.size(19.dp),
             )
         }
     }

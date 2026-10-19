@@ -17,6 +17,36 @@ data class AccentSpec(
     val saturation: Float,
 )
 
+/** Parses #RRGGBB or RRGGBB; returns null for anything else. */
+fun parseHexColor(hex: String): Color? {
+    val clean = hex.trim().removePrefix("#")
+    if (clean.length != 6 || clean.any { it.digitToIntOrNull(16) == null }) return null
+    val value = clean.toLongOrNull(16) ?: return null
+    return Color(0xFF000000L or value)
+}
+
+/** Derives hue and saturation from an arbitrary colour so custom accents reuse the same generator. */
+fun accentSpecFromColor(color: Color): AccentSpec {
+    val r = color.red
+    val g = color.green
+    val b = color.blue
+    val max = maxOf(r, g, b)
+    val min = minOf(r, g, b)
+    val lightness = (max + min) / 2f
+    val delta = max - min
+    val saturation = if (delta == 0f) 0f else delta / (1f - kotlin.math.abs(2f * lightness - 1f))
+    val hue = when {
+        delta == 0f -> 0f
+        max == r -> 60f * (((g - b) / delta) % 6f)
+        max == g -> 60f * (((b - r) / delta) + 2f)
+        else -> 60f * (((r - g) / delta) + 4f)
+    }
+    return AccentSpec(
+        hue = hue.mod(360f),
+        saturation = saturation.coerceIn(0.25f, 0.90f),
+    )
+}
+
 fun accentSpec(accent: AccentColor): AccentSpec = when (accent) {
     AccentColor.Navy -> AccentSpec(hue = 215f, saturation = 0.62f)
     AccentColor.Violet -> AccentSpec(hue = 265f, saturation = 0.58f)
@@ -35,8 +65,9 @@ fun accentSwatch(accent: AccentColor, dark: Boolean): Color {
     }
 }
 
-fun islandColorScheme(accent: AccentColor, dark: Boolean): ColorScheme {
-    val spec = accentSpec(accent)
+fun islandColorScheme(accent: AccentColor, dark: Boolean, customHex: String = ""): ColorScheme {
+    val custom = parseHexColor(customHex)?.let { accentSpecFromColor(it) }
+    val spec = custom ?: accentSpec(accent)
     val hue = spec.hue
     val saturation = spec.saturation
     val complement = (hue + 150f) % 360f

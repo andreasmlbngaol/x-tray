@@ -170,6 +170,13 @@ private fun PowerMenu(services: IslandServices) {
                         }
                         pending = null
                     },
+                    colors = if (action == PowerAction.Suspend) {
+                        androidx.compose.material3.ButtonDefaults.textButtonColors()
+                    } else {
+                        androidx.compose.material3.ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error,
+                        )
+                    },
                 ) {
                     Text(action.label)
                 }
@@ -227,9 +234,9 @@ private fun ModuleRail(
             )
             val container by animateColorAsState(
                 targetValue = if (selected) {
-                    MaterialTheme.colorScheme.secondaryContainer
+                    MaterialTheme.colorScheme.primaryContainer
                 } else {
-                    Color.Transparent
+                    MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0f)
                 },
                 animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
                 label = "railSelection",
@@ -242,10 +249,11 @@ private fun ModuleRail(
                 shape = shape,
                 color = container,
                 contentColor = if (selected) {
-                    MaterialTheme.colorScheme.onSecondaryContainer
+                    MaterialTheme.colorScheme.onPrimaryContainer
                 } else {
                     MaterialTheme.colorScheme.onSurfaceVariant
                 },
+                tonalElevation = if (selected) 1.dp else 0.dp,
             ) {
                 Column(
                     modifier = Modifier.fillMaxSize(),

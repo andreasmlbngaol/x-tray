@@ -65,6 +65,7 @@ import javax.swing.SwingUtilities
 import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
+    installStderrNoiseFilter()
     val session = currentSession()
     configureRendering(session)
 
@@ -95,6 +96,36 @@ fun main(args: Array<String>) {
     } finally {
         instance.release()
     }
+}
+
+/**
+ * AWT prints "Exception ... while constructing DataFlavor" whenever another
+ * application (for example an IDE) puts Java-serialized objects on the
+ * clipboard. The flavours are foreign to us and harmless, but the lines look
+ * like crashes, so they are dropped from stderr.
+ */
+private fun installStderrNoiseFilter() {
+    val original = System.err
+    val filtered = object : java.io.OutputStream() {
+        private val line = StringBuilder()
+
+        override fun write(byte: Int) {
+            if (byte == '\n'.code) {
+                val text = line.toString()
+                line.setLength(0)
+                if (!text.contains("while constructing DataFlavor")) {
+                    original.print(text + "\n")
+                }
+            } else {
+                line.append(byte.toChar())
+            }
+        }
+
+        override fun flush() {
+            original.flush()
+        }
+    }
+    System.setErr(java.io.PrintStream(filtered, true))
 }
 
 private fun currentSession(): SessionInfo {
@@ -134,6 +165,19 @@ private fun ApplicationScope.IslandDeskApp() {
     fun requestState(target: IslandState) {
         requestCounter += 1L
         stateRequest = IslandStateRequest(requestCounter, target)
+    }
+
+    LaunchedEffect(Unit) {
+        // Test hook: seed the shelf so drag-out can be exercised without a
+        // file manager. Comma separated absolute paths.
+        System.getenv("ISLANDDESK_SHELF_SEED")
+            ?.split(",")
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            ?.let { paths ->
+                services.shelf.add(paths, System.currentTimeMillis())
+                services.bump()
+            }
     }
 
     LaunchedEffect(Unit) {
@@ -285,12 +329,9 @@ private fun ApplicationScope.IslandDeskApp() {
         // `islanddesk show` could not bring the island back.
         LaunchedEffect(Unit) {
             while (true) {
-                val covered = fullscreen ||
-                    (settings.current.hideOverMaximized && maximized)
-                val shouldShow = visible && !covered
-                if (window.isVisible != shouldShow) {
-                    window.isVisible = shouldShow
-                    Log.i("window shown=" + shouldShow + " covered=" + covered)
+                if (window.isVisible != visible) {
+                    window.isVisible = visible
+                    Log.i("window shown=" + visible)
                 }
                 delay(300L)
             }
@@ -306,12 +347,14 @@ private fun ApplicationScope.IslandDeskApp() {
         IslandDeskTheme(
             darkTheme = darkTheme,
             accent = settings.current.accentColor,
+            customAccent = settings.current.customAccent,
             reduceMotion = settings.current.reduceMotion,
         ) {
             IslandDesk(
                 services = services,
                 stateRequest = stateRequest,
                 initialModuleId = System.getenv("ISLANDDESK_MODULE"),
+                dormant = fullscreen || (settings.current.hideOverMaximized && maximized),
                 onStateChange = {
                     islandState = it
                     Log.i("state=" + it)

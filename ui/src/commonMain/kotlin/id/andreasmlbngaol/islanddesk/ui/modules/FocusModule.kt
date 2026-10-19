@@ -242,12 +242,6 @@ class FocusModule(private val services: IslandServices) : IslandModule {
             ) {
                 Text("Start focus")
             }
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = "The countdown stays visible in peek, with seconds.",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 

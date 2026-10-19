@@ -18,10 +18,22 @@ object IslandDimens {
     val WindowTopPadding = 0.dp
 
     val Collapsed = IslandSize(
-        width = 220.dp,
+        width = 272.dp,
         height = 38.dp,
         bottomRadius = 19.dp,
         filletRadius = 8.dp,
+    )
+
+    /**
+     * Dormant form used while a maximized or fullscreen window is focused.
+     * A 120x6 dp hairline keeps the island reachable (hover opens peek) while
+     * covering practically nothing of the window underneath.
+     */
+    val Dormant = IslandSize(
+        width = 120.dp,
+        height = 6.dp,
+        bottomRadius = 3.dp,
+        filletRadius = 2.dp,
     )
 
     val Peek = IslandSize(

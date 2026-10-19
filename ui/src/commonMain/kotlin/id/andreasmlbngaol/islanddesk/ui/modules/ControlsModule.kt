@@ -9,13 +9,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeOff
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.AirplanemodeActive
 import androidx.compose.material.icons.rounded.Bluetooth
 import androidx.compose.material.icons.rounded.BluetoothDisabled
 import androidx.compose.material.icons.rounded.Brightness6
+import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.DoNotDisturbOn
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.MicOff
@@ -24,6 +27,7 @@ import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material.icons.rounded.WifiOff
 import androidx.compose.material3.FilledTonalIconToggleButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconToggleButtonShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -37,10 +41,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import id.andreasmlbngaol.islanddesk.core.IslandModule
+import id.andreasmlbngaol.islanddesk.core.settings.ThemeMode
 import id.andreasmlbngaol.islanddesk.ui.services.IslandServices
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -142,7 +148,7 @@ class ControlsModule(private val services: IslandServices) : IslandModule {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 ToggleTile(
-                    label = "Microphone",
+                    label = "Mic",
                     icon = if (state.micMuted == true) Icons.Rounded.MicOff else Icons.Rounded.Mic,
                     checked = state.micMuted != true,
                     modifier = Modifier.weight(1f),
@@ -175,8 +181,14 @@ class ControlsModule(private val services: IslandServices) : IslandModule {
                         },
                     )
                 }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 ToggleTile(
-                    label = "Do not disturb",
+                    label = "DND",
                     icon = Icons.Rounded.DoNotDisturbOn,
                     checked = services.settings.current.doNotDisturb,
                     modifier = Modifier.weight(1f),
@@ -184,6 +196,37 @@ class ControlsModule(private val services: IslandServices) : IslandModule {
                         services.settings.update { it.copy(doNotDisturb = !it.doNotDisturb) }
                     },
                 )
+                val darkSurface = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+                ToggleTile(
+                    label = "Dark",
+                    icon = Icons.Rounded.DarkMode,
+                    checked = darkSurface,
+                    modifier = Modifier.weight(1f),
+                    onCheckedChange = { dark ->
+                        services.settings.update {
+                            it.copy(themeMode = if (dark) ThemeMode.Dark else ThemeMode.Light)
+                        }
+                    },
+                )
+                if (services.controls.hasWifi || services.controls.hasBluetooth) {
+                    val airplane = state.wifiEnabled == false && state.bluetoothEnabled == false
+                    ToggleTile(
+                        label = "Airplane",
+                        icon = Icons.Rounded.AirplanemodeActive,
+                        checked = airplane,
+                        modifier = Modifier.weight(1f),
+                        onCheckedChange = { enable ->
+                            if (enable) {
+                                if (state.wifiEnabled == true) services.controls.toggleWifi()
+                                if (state.bluetoothEnabled == true) services.controls.toggleBluetooth()
+                            } else {
+                                if (state.wifiEnabled == false) services.controls.toggleWifi()
+                                if (state.bluetoothEnabled == false) services.controls.toggleBluetooth()
+                            }
+                            refreshAsync()
+                        },
+                    )
+                }
             }
         }
     }
@@ -265,7 +308,7 @@ private fun LevelCard(
                     dragging = false
                     onCommit(draft.toInt())
                 },
-                valueRange = 0f..100f,
+                valueRange = 0f..if (title == "Volume") 150f else 100f,
             )
         }
     }
@@ -286,8 +329,12 @@ private fun ToggleTile(
         FilledTonalIconToggleButton(
             checked = checked,
             onCheckedChange = onCheckedChange,
+            shapes = IconToggleButtonShapes(
+                shape = CircleShape,
+                pressedShape = RoundedCornerShape(14.dp),
+                checkedShape = RoundedCornerShape(18.dp),
+            ),
             modifier = Modifier.size(52.dp),
-            shape = RoundedCornerShape(18.dp),
         ) {
             Icon(
                 imageVector = icon,

@@ -16,10 +16,13 @@ val LocalReduceMotion = staticCompositionLocalOf { false }
 fun IslandDeskTheme(
     darkTheme: Boolean = true,
     accent: AccentColor = AccentColor.Navy,
+    customAccent: String = "",
     reduceMotion: Boolean = false,
     content: @Composable () -> Unit,
 ) {
-    val colorScheme = remember(accent, darkTheme) { islandColorScheme(accent, darkTheme) }
+    val colorScheme = remember(accent, customAccent, darkTheme) {
+        islandColorScheme(accent, darkTheme, customAccent)
+    }
     CompositionLocalProvider(LocalReduceMotion provides reduceMotion) {
         MaterialExpressiveTheme(
             colorScheme = colorScheme,
