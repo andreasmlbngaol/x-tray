@@ -46,7 +46,8 @@ Desktop dan Material 3 Expressive.
 - **Dormant** saat ada window fullscreen atau maximized (bisa dimatikan di
   Settings): island mengecil jadi garis 120x6 dp di tengah atas, hover
   membuka peek, klik membuka expanded — jadi tidak menutupi tab browser tapi
-  tetap bisa dipanggil. Sembunyikan total lewat tray atau `islanddesk hide`.
+  tetap bisa dipanggil. Klik kanan di island (atau tray / `islanddesk hide`)
+  juga mengecilkannya ke garis yang sama; hover di garis membukanya lagi.
 - **Single instance**, tray icon, autostart XDG, CLI/IPC lewat Unix socket.
 
 ## Kebutuhan

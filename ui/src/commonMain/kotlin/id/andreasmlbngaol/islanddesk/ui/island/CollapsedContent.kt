@@ -49,7 +49,7 @@ fun CollapsedContent(
     Row(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 20.dp),
+            .padding(horizontal = 24.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -122,7 +122,7 @@ fun NotificationContent(
     Row(
         modifier = modifier
             .fillMaxSize()
-            .padding(start = 22.dp, end = 18.dp, top = 12.dp, bottom = 12.dp),
+            .padding(start = 26.dp, end = 22.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {

@@ -18,7 +18,7 @@ object IslandDimens {
     val WindowTopPadding = 0.dp
 
     val Collapsed = IslandSize(
-        width = 288.dp,
+        width = 300.dp,
         height = 38.dp,
         bottomRadius = 19.dp,
         filletRadius = 12.dp,

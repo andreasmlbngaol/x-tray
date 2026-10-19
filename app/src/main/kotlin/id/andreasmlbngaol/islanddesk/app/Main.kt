@@ -159,7 +159,10 @@ private fun ApplicationScope.IslandDeskApp() {
     var islandState by remember { mutableStateOf(IslandState.Collapsed) }
     var stateRequest by remember { mutableStateOf<IslandStateRequest?>(null) }
     var requestCounter by remember { mutableStateOf(0L) }
-    var visible by remember { mutableStateOf(true) }
+    // Right click (or the tray / IPC hide) shrinks the island to the dormant
+    // hairline instead of unmapping the window: it stays reachable at the top
+    // edge and hovering it opens peek again.
+    var hidden by remember { mutableStateOf(false) }
     var fullscreen by remember { mutableStateOf(false) }
     var maximized by remember { mutableStateOf(false) }
 
@@ -245,7 +248,7 @@ private fun ApplicationScope.IslandDeskApp() {
                     SwingUtilities.invokeLater {
                         if (!services.settings.current.doNotDisturb) {
                             services.notifications.push(incoming.appName, incoming.title, incoming.body)
-                            visible = true
+                            hidden = false
                         }
                     }
                 },
@@ -263,7 +266,7 @@ private fun ApplicationScope.IslandDeskApp() {
                 services = services,
                 currentState = { islandState },
                 requestState = { target -> SwingUtilities.invokeLater { requestState(target) } },
-                setVisible = { value -> SwingUtilities.invokeLater { visible = value } },
+                setHidden = { value -> SwingUtilities.invokeLater { hidden = value } },
                 quit = { SwingUtilities.invokeLater { exitApplication() } },
             )
         }
@@ -275,8 +278,8 @@ private fun ApplicationScope.IslandDeskApp() {
         val tray = installTray(
             onToggle = { SwingUtilities.invokeLater { requestState(IslandState.Expanded) } },
             onCollapse = { SwingUtilities.invokeLater { requestState(IslandState.Collapsed) } },
-            onHide = { SwingUtilities.invokeLater { visible = false } },
-            onShow = { SwingUtilities.invokeLater { visible = true } },
+            onHide = { SwingUtilities.invokeLater { hidden = true } },
+            onShow = { SwingUtilities.invokeLater { hidden = false } },
             onQuit = { SwingUtilities.invokeLater { exitApplication() } },
             isDnd = { settings.current.doNotDisturb },
             setDnd = { value -> SwingUtilities.invokeLater { settings.update { it.copy(doNotDisturb = value) } } },
@@ -351,36 +354,6 @@ private fun ApplicationScope.IslandDeskApp() {
         // LaunchedEffect keyed on state: while the window is hidden Compose may
         // stop requesting frames, so a keyed effect would never run again and
         // `islanddesk show` could not bring the island back.
-        // While hidden the window receives no pointer events, so the only way
-        // back is to watch the global pointer: once it has left the island and
-        // then touches the top edge inside the island's span, show it again.
-        LaunchedEffect(visible) {
-            if (visible) return@LaunchedEffect
-            var armed = false
-            while (!visible) {
-                val pointer = runCatching { java.awt.MouseInfo.getPointerInfo()?.location }.getOrNull()
-                if (pointer != null) {
-                    val insideX = pointer.x in window.x..(window.x + window.width)
-                    val inside = insideX && pointer.y in window.y..(window.y + window.height)
-                    if (!armed && !inside) armed = true
-                    if (armed && insideX && pointer.y <= window.y + 1) {
-                        visible = true
-                    }
-                }
-                delay(80L)
-            }
-        }
-
-        LaunchedEffect(Unit) {
-            while (true) {
-                if (window.isVisible != visible) {
-                    window.isVisible = visible
-                    Log.i("window shown=" + visible)
-                }
-                delay(300L)
-            }
-        }
-
         val systemDark = isSystemInDarkTheme()
         val darkTheme = when (settings.current.themeMode) {
             ThemeMode.System -> systemDark
@@ -398,13 +371,14 @@ private fun ApplicationScope.IslandDeskApp() {
                 services = services,
                 stateRequest = stateRequest,
                 initialModuleId = System.getenv("ISLANDDESK_MODULE"),
-                dormant = fullscreen || (settings.current.hideOverMaximized && maximized),
+                dormant = hidden || fullscreen || (settings.current.hideOverMaximized && maximized),
                 onStateChange = {
                     islandState = it
                     Log.i("state=" + it)
                 },
                 onRequestHide = {
-                    visible = false
+                    requestState(IslandState.Collapsed)
+                    hidden = true
                     Log.i("island hidden by right click")
                 },
                 onGeometryChanged = { geometry ->
@@ -454,7 +428,7 @@ private fun handleCommand(
     services: IslandServices,
     currentState: () -> IslandState,
     requestState: (IslandState) -> Unit,
-    setVisible: (Boolean) -> Unit,
+    setHidden: (Boolean) -> Unit,
     quit: () -> Unit,
 ): String = when (command) {
     IpcCommand.Toggle -> {
@@ -470,11 +444,11 @@ private fun handleCommand(
         "ok"
     }
     IpcCommand.Show -> {
-        setVisible(true)
+        setHidden(false)
         "ok"
     }
     IpcCommand.Hide -> {
-        setVisible(false)
+        setHidden(true)
         "ok"
     }
     IpcCommand.Quit -> {
@@ -488,7 +462,7 @@ private fun handleCommand(
         } else {
             SwingUtilities.invokeLater {
                 services.notifications.push("IslandDesk", "", command.message)
-                setVisible(true)
+                setHidden(false)
             }
             "ok"
         }

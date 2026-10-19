@@ -145,12 +145,11 @@ kelak ada backend Wayland native.
   bebannya satu query ringan per detik.
 - Window aktif diabaikan bila `_NET_WM_PID` sama dengan PID IslandDesk,
   supaya mengklik island tidak pernah menyembunyikannya.
-- Visibilitas diterapkan dari loop polling 300 ms, bukan dari
-  `LaunchedEffect` yang di-key pada state. Saat window disembunyikan
-  (`isVisible = false`) Compose berhenti meminta frame, sehingga efek
-  berbasis state tidak dijalankan lagi dan `islanddesk show` tidak akan
-  pernah mengembalikan window. Loop biasa tetap berjalan karena hanya
-  memakai `delay` pada dispatcher Swing.
+- Window tidak pernah di-unmap. "Sembunyikan" berarti state dormant yang
+  sama dengan kasus maximized (garis 120x6), jadi hover tetap diterima dan
+  peek bisa dibuka lagi. Pendekatan `isVisible = false` dibuang: saat window
+  tidak dipetakan Compose berhenti meminta frame, sehingga tidak ada cara
+  mengembalikannya lewat hover.
 - DND diterapkan sebagai preferensi: hover tidak membuka panel dan
   `islanddesk notify` dijawab `suppressed`.
 - Multi-monitor: `DisplayInfo.screens()` membaca semua `ScreenDevice`;

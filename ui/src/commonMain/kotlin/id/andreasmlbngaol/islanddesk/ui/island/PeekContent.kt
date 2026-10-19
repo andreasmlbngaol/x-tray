@@ -94,7 +94,7 @@ fun PeekContent(
     Row(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 20.dp, vertical = 10.dp),
+            .padding(horizontal = 26.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
