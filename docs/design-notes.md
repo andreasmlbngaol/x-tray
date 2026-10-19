@@ -347,7 +347,7 @@ Prinsipnya: expressive dipakai pada **titik interaksi** (tekan, pilih, buka), bu
 | Collapsed | 288 dp | 38 dp | 20 dp horizontal | 19 dp | jam + tanggal + speed 2 baris + baterai |
 | Notifikasi | 384 dp | 100 dp | 22/18 dp | 30 dp | kartu saat notifikasi muncul di collapsed |
 | Dormant | 120 dp | 6 dp | 0 | 3 dp | garis saat window maximized/fullscreen fokus |
-| Peek | 420 dp | 140 dp | 20 dp | 34 dp | jam HH/MM/ss + tanggal, media + kontrol, baterai, notifikasi/fokus |
+| Peek | 420 dp | 148 dp | 20 dp | 34 dp | jam HH/MM/ss + tanggal, media + kontrol, baterai, notifikasi/fokus |
 | Expanded | 460 dp | 620 dp | 20 dp | 34 dp | rail modul + konten (tanpa footer) |
 | Tab menempel | sama | sama | sama | atas 0, bawah 32 dp, fillet 12 dp | default layar tanpa notch |
 

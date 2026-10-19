@@ -55,12 +55,18 @@ fun ExpandedContent(
 ) {
     val clock = rememberClockText()
     val notification = services.notifications.current
-    Column(modifier = modifier.fillMaxSize()) {
+    // The shape's body starts one fillet inside the bounds, so the whole
+    // panel is inset by that amount to keep the rail off the curve.
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 12.dp),
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp)
-                .padding(start = 20.dp, end = 10.dp),
+                .padding(start = 8.dp, end = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -95,7 +101,7 @@ fun ExpandedContent(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                    .padding(horizontal = 8.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 if (notification != null) {
