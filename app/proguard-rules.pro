@@ -38,9 +38,3 @@
 -keep,includedescriptorclasses class id.andreasmlbngaol.xtray.**$$serializer { *; }
 -keepclassmembers class id.andreasmlbngaol.xtray.** { *** Companion; }
 -keepclasseswithmembers class id.andreasmlbngaol.xtray.** { kotlinx.serialization.KSerializer serializer(...); }
-# JNA Win32 bindings: interfaces, structures and callbacks are all reached
-# through reflection, so the native packages stay intact.
--keep class id.andreasmlbngaol.xtray.platform.window.** { *; }
--keep class id.andreasmlbngaol.xtray.platform.system.** { *; }
--keepclassmembers class * implements com.sun.jna.Callback { *; }
--keepclassmembers class * extends com.sun.jna.Structure { *; }

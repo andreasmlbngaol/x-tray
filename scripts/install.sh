@@ -12,7 +12,7 @@ usage() {
 Install X-Tray from the GitHub releases.
 
 Usage:
-  install.sh [--version v1.1.0]
+  install.sh [--version v1.1.1]
 
 Without --version the latest release is used. The .deb is downloaded to a
 temporary file, installed with apt, and removed afterwards.

@@ -5,11 +5,7 @@ plugins {
     alias(libs.plugins.kotlinSerialization)
 }
 
-// CI passes the tag through the environment: PowerShell mangles "-Pname=1.1.0"
-// when it hands it to a .bat wrapper.
-val appVersion = providers.environmentVariable("XTRAY_VERSION")
-    .orElse(providers.gradleProperty("appVersion"))
-    .getOrElse("1.0.0")
+val appVersion = providers.gradleProperty("appVersion").getOrElse("1.0.0")
 
 /**
  * Single source of truth for the version: the tag drives it in CI, local builds

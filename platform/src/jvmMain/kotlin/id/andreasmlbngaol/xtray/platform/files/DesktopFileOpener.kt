@@ -1,7 +1,6 @@
 package id.andreasmlbngaol.xtray.platform.files
 
 import id.andreasmlbngaol.xtray.platform.internal.Log
-import id.andreasmlbngaol.xtray.platform.internal.Os
 import java.awt.Desktop
 import java.io.File
 import java.net.URI
@@ -21,14 +20,7 @@ class DesktopFileOpener : FileOpener {
     }.onFailure { Log.w("cannot open " + path, it) }.getOrDefault(false)
 
     override fun revealInFolder(path: String): Boolean = runCatching {
-        val file = File(path)
-        if (!file.exists()) return@runCatching false
-        // Explorer needs the whole "/select,<path>" as one argument.
-        if (Os.isWindows) {
-            ProcessBuilder("explorer.exe", "/select," + file.absolutePath).start()
-            return@runCatching true
-        }
-        val parent = file.parentFile ?: return@runCatching false
+        val parent = File(path).parentFile ?: return@runCatching false
         if (desktop != null) {
             desktop.open(parent)
         } else {

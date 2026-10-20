@@ -13,27 +13,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # The tests are platform independent, so they run once on Linux. Both
-  # packages only start after they pass.
-  test:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "21"
-
-      - uses: gradle/actions/setup-gradle@v4
-
-      - name: Test
-        run: ./gradlew :core:jvmTest :platform:jvmTest --no-daemon
-
-  # jpackage only builds for the host OS, so deb and msi run in parallel on
-  # their own runners once the tests are green.
   deb:
-    needs: test
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -54,10 +34,13 @@ jobs:
         id: version
         run: echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
+      - name: Test
+        run: ./gradlew :core:jvmTest :platform:jvmTest --no-daemon
+
       - name: Build minified .deb
-        env:
-          XTRAY_VERSION: ${{ steps.version.outputs.value }}
-        run: ./gradlew :app:packageReleaseDeb --no-daemon
+        run: >-
+          ./gradlew :app:packageReleaseDeb --no-daemon
+          -PappVersion=${{ steps.version.outputs.value }}
 
       - name: Collect artifact
         run: |
@@ -66,67 +49,9 @@ jobs:
             "dist/x-tray_${{ steps.version.outputs.value }}_amd64.deb"
           ls -lh dist
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: x-tray-deb
-          path: dist/*.deb
-
-  msi:
-    needs: test
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "21"
-
-      - uses: gradle/actions/setup-gradle@v4
-
-      - name: Ensure WiX Toolset
-        shell: pwsh
-        run: |
-          if (-not (Get-Command candle.exe -ErrorAction SilentlyContinue)) {
-            choco install wixtoolset --no-progress -y
-          }
-
-      - name: Read version from tag
-        id: version
-        shell: pwsh
-        run: |
-          "value=$($env:GITHUB_REF_NAME -replace '^v','')" >> $env:GITHUB_OUTPUT
-
-      - name: Build minified .msi
-        env:
-          XTRAY_VERSION: ${{ steps.version.outputs.value }}
-        run: .\gradlew.bat :app:packageReleaseMsi --no-daemon
-
-      - name: Collect artifact
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force dist | Out-Null
-          Copy-Item "app/build/compose/binaries/main-release/msi/*.msi" "dist/x-tray_${{ steps.version.outputs.value }}_x64.msi"
-          Get-ChildItem dist
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: x-tray-msi
-          path: dist/*.msi
-
-  # One publish step, so the release never exists with only half the files.
-  release:
-    needs: [deb, msi]
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          path: dist
-          merge-multiple: true
-
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*
+          files: dist/*.deb
           generate_release_notes: true
           fail_on_unmatched_files: true

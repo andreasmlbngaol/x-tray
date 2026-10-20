@@ -3,7 +3,6 @@ package id.andreasmlbngaol.xtray.ui.modules
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import id.andreasmlbngaol.xtray.platform.internal.Log
-import id.andreasmlbngaol.xtray.platform.internal.Shell
 import org.jetbrains.skia.Image
 import java.io.File
 import java.util.concurrent.TimeUnit
@@ -12,8 +11,10 @@ private val imageExtensions = setOf("png", "jpg", "jpeg", "webp", "gif", "bmp")
 private val videoExtensions = setOf("mp4", "mkv", "webm", "avi", "mov", "m4v")
 private const val MAX_THUMBNAIL_BYTES = 16L * 1024L * 1024L
 
-// Shell.exists honours PATHEXT, so ffmpeg.exe is found on Windows too.
-private val ffmpegAvailable: Boolean by lazy { Shell.exists("ffmpeg") }
+private val ffmpegAvailable: Boolean by lazy {
+    val path = System.getenv("PATH").orEmpty()
+    path.split(File.pathSeparatorChar).any { File(it, "ffmpeg").canExecute() }
+}
 
 /** Small LRU so scrolling the shelf does not re-decode the same files. */
 private val cache = object : LinkedHashMap<String, ImageBitmap?>(16, 0.75f, true) {
