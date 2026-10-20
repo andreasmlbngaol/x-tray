@@ -91,10 +91,30 @@ back on its own.
 
 ## Install
 
+### One command (Linux)
+
+The installer resolves the latest release, downloads the `.deb` to a temporary
+file, installs it with `apt`, and deletes the file again:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/andreasmlbngaol/x-tray/master/scripts/install.sh | bash
+```
+
+Pass `--version` to pin a release (the pipe form needs `bash -s --` to forward
+arguments):
+
+```bash
+./scripts/install.sh --version v1.1.0
+curl -fsSL https://raw.githubusercontent.com/andreasmlbngaol/x-tray/master/scripts/install.sh | bash -s -- --version v1.1.0
+```
+
+The script needs `curl`, `dpkg` and `apt-get` (Debian, Ubuntu, Zorin) and only
+publishes `amd64` packages today. Nothing is left in `/tmp` afterwards.
+
 ### From a release (Linux)
 
-Download the latest `.deb` from [Releases](https://github.com/andreasmlbngaol/x-tray/releases),
-then:
+Prefer to do it by hand? Download the latest `.deb` from
+[Releases](https://github.com/andreasmlbngaol/x-tray/releases), then:
 
 ```bash
 sudo apt install ./x-tray_1.1.0_amd64.deb
