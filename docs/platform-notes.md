@@ -92,6 +92,21 @@ dipakai kembali.
 
 ## Hover dan input pointer
 
+Hover tidak boleh bergantung pada satu sumber saja:
+
+- `MouseInfo`/XQueryPointer **membeku** selama pointer berada di atas surface
+  Wayland native. Kalau hover hanya dibaca dari posisi itu, peek tidak pernah
+  menutup karena posisi terakhir yang terlihat masih di dalam island.
+- Event enter/exit AWT tetap datang dari compositor saat pointer pindah ke
+  surface native, jadi event itu yang menjadi sumber utama.
+- Polling posisi tetap dipakai sebagai cadangan, tetapi hanya bereaksi kalau
+  posisi pointer benar-benar berubah. Posisi yang membeku tidak boleh
+  mengunci hover.
+
+Bukti: pada build 1.0.3, log debug `hover=` tidak pernah muncul selama lima
+siklus hover masuk/keluar, artinya seluruh perubahan hover berasal dari event
+AWT, dan setiap keluar kembali ke 324x50.
+
 - `xdotool mousemove` lewat XTest **tidak** diandalkan untuk memicu hover di
   permukaan XWayland; event dapat tidak sampai ke window Compose.
 - Namun hover dengan kursor fisik **bekerja**: saat kursor berada di atas
