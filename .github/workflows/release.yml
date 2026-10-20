@@ -55,3 +55,53 @@ jobs:
           files: dist/*.deb
           generate_release_notes: true
           fail_on_unmatched_files: true
+
+  # jpackage only builds for the host OS, so the MSI needs a Windows runner.
+  # It runs after the deb job so the release already exists for the upload.
+  msi:
+    needs: deb
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Ensure WiX Toolset
+        shell: pwsh
+        run: |
+          if (-not (Get-Command candle.exe -ErrorAction SilentlyContinue)) {
+            choco install wixtoolset --no-progress -y
+          }
+
+      - name: Read version from tag
+        id: version
+        shell: pwsh
+        run: |
+          "value=$($env:GITHUB_REF_NAME -replace '^v','')" >> $env:GITHUB_OUTPUT
+
+      - name: Test
+        run: .\gradlew.bat :core:jvmTest :platform:jvmTest --no-daemon
+
+      - name: Build minified .msi
+        run: >-
+          .\gradlew.bat :app:packageReleaseMsi --no-daemon
+          -PappVersion=${{ steps.version.outputs.value }}
+
+      - name: Collect artifact
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item "app/build/compose/binaries/main-release/msi/*.msi" "dist/x-tray_${{ steps.version.outputs.value }}_x64.msi"
+          Get-ChildItem dist
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.msi
+          fail_on_unmatched_files: true
+

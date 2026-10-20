@@ -179,17 +179,21 @@ class SettingsModule(private val services: IslandServices) : IslandModule {
                         services.settings.update { it.copy(hideOverMaximized = value) }
                     },
                 )
-                SwitchRow(
-                    title = "Replace system notifications",
-                    subtitle = "Stops GNOME's own popups; every notification lands here",
-                    checked = settings.replaceSystemNotifications,
-                    onCheckedChange = { value ->
-                        services.settings.update { it.copy(replaceSystemNotifications = value) }
-                    },
-                )
+                // Only the Linux notification daemon can be replaced; Windows
+                // and macOS keep their own toasts.
+                if (services.notificationServer.available) {
+                    SwitchRow(
+                        title = "Replace system notifications",
+                        subtitle = "Stops the desktop's own popups; every notification lands here",
+                        checked = settings.replaceSystemNotifications,
+                        onCheckedChange = { value ->
+                            services.settings.update { it.copy(replaceSystemNotifications = value) }
+                        },
+                    )
+                }
                 SwitchRow(
                     title = "Start at login",
-                    subtitle = "Writes an XDG autostart entry",
+                    subtitle = "Starts X-Tray when you sign in",
                     checked = services.autostart.isEnabled(),
                     onCheckedChange = { value ->
                         services.autostart.setEnabled(value)

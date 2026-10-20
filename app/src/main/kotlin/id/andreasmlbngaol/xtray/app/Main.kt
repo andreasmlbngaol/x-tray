@@ -32,22 +32,30 @@ import id.andreasmlbngaol.xtray.core.settings.ThemeMode
 import id.andreasmlbngaol.xtray.core.shelf.ShelfStore
 import id.andreasmlbngaol.xtray.platform.DisplayInfo
 import id.andreasmlbngaol.xtray.platform.SessionInfo
+import id.andreasmlbngaol.xtray.platform.autostart.WindowsAutostartManager
 import id.andreasmlbngaol.xtray.platform.autostart.XdgAutostartManager
 import id.andreasmlbngaol.xtray.platform.battery.SysfsBatterySource
+import id.andreasmlbngaol.xtray.platform.battery.WindowsBatterySource
 import id.andreasmlbngaol.xtray.platform.clipboard.AwtClipboardWatcher
 import id.andreasmlbngaol.xtray.platform.files.DesktopFileOpener
 import id.andreasmlbngaol.xtray.platform.instance.SingleInstance
 import id.andreasmlbngaol.xtray.platform.internal.AppPaths
 import id.andreasmlbngaol.xtray.platform.internal.Log
+import id.andreasmlbngaol.xtray.platform.internal.Os
 import id.andreasmlbngaol.xtray.platform.ipc.IpcServer
 import id.andreasmlbngaol.xtray.platform.ipc.sendIpc
 import id.andreasmlbngaol.xtray.platform.media.BusctlMediaSource
+import id.andreasmlbngaol.xtray.platform.media.WindowsMediaSource
 import id.andreasmlbngaol.xtray.platform.network.SysfsNetworkSpeedSource
+import id.andreasmlbngaol.xtray.platform.network.WindowsNetworkSpeedSource
 import id.andreasmlbngaol.xtray.platform.notifications.DbusNotificationServer
+import id.andreasmlbngaol.xtray.platform.notifications.WindowsNotificationServer
 import id.andreasmlbngaol.xtray.platform.settings.SettingsFile
 import id.andreasmlbngaol.xtray.platform.system.ShellPowerControls
 import id.andreasmlbngaol.xtray.platform.system.ShellSystemControls
-import id.andreasmlbngaol.xtray.platform.x11.X11Window
+import id.andreasmlbngaol.xtray.platform.system.WindowsPowerControls
+import id.andreasmlbngaol.xtray.platform.system.WindowsSystemControls
+import id.andreasmlbngaol.xtray.platform.window.NativeWindow
 import id.andreasmlbngaol.xtray.ui.island.XTray
 import id.andreasmlbngaol.xtray.ui.island.IslandDimens
 import id.andreasmlbngaol.xtray.ui.services.IslandServices
@@ -68,6 +76,7 @@ import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.awt.image.BufferedImage
 import javax.swing.SwingUtilities
+import kotlin.math.roundToInt
 import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
@@ -81,7 +90,7 @@ fun main(args: Array<String>) {
             System.err.println(IPC_USAGE)
             exitProcess(2)
         }
-        val reply = sendIpc(AppPaths.socket, command)
+        val reply = sendIpc(command)
         if (reply == null) {
             System.err.println("X-Tray: no running instance")
             exitProcess(1)
@@ -92,7 +101,7 @@ fun main(args: Array<String>) {
 
     val instance = SingleInstance(AppPaths.lock)
     if (!instance.tryAcquire()) {
-        val reply = sendIpc(AppPaths.socket, IpcCommand.Show)
+        val reply = sendIpc(IpcCommand.Show)
         Log.i("instance already running, forwarded show: " + reply)
         return
     }
@@ -151,6 +160,12 @@ private fun currentSession(): SessionInfo {
  */
 private fun configureRendering(session: SessionInfo) {
     val requested = System.getenv("XTRAY_RENDER_API")?.uppercase()
+    // Windows defaults to Direct3D, which handles the transparent surface
+    // fine; only Linux needs the Wayland workaround.
+    if (requested == null && Os.isWindows) {
+        Log.i("renderApi=default (windows)")
+        return
+    }
     val api = requested ?: if (session.isWayland) "SOFTWARE" else "OPENGL"
     System.setProperty("skiko.renderApi", api)
     Log.i("renderApi=" + api + " requested=" + requested)
@@ -262,8 +277,8 @@ private fun ApplicationScope.XTrayApplication() {
 
     LaunchedEffect(Unit) {
         while (true) {
-            fullscreen = runCatching { X11Window.isActiveWindowFullscreen() }.getOrDefault(false)
-            maximized = runCatching { X11Window.isActiveWindowMaximized() }.getOrDefault(false)
+            fullscreen = runCatching { NativeWindow.isActiveWindowFullscreen() }.getOrDefault(false)
+            maximized = runCatching { NativeWindow.isActiveWindowMaximized() }.getOrDefault(false)
             delay(1_000L)
         }
     }
@@ -302,7 +317,7 @@ private fun ApplicationScope.XTrayApplication() {
     }
 
     DisposableEffect(Unit) {
-        val server = IpcServer(AppPaths.socket) { command ->
+        val server = IpcServer { command ->
             handleCommand(
                 command = command,
                 services = services,
@@ -393,7 +408,7 @@ private fun ApplicationScope.XTrayApplication() {
             })
             repeat(6) {
                 delay(250L)
-                X11Window.applyEwmhHints()
+                NativeWindow.applyWindowHints()
             }
             startDemoDriver(
                 demo = System.getenv("XTRAY_DEMO"),
@@ -454,19 +469,26 @@ private fun ApplicationScope.XTrayApplication() {
                     Log.i("island hidden by right click")
                 },
                 onGeometryChanged = { geometry ->
-                    window.setSize(geometry.windowWidthPx, geometry.windowHeightPx)
+                    // Compose measures in device pixels; AWT sizes and positions
+                    // in user space, so HiDPI screens need the scale divided out
+                    // before the window and the hover rectangle are placed.
+                    val scale = window.graphicsConfiguration.defaultTransform.scaleX
+                        .takeIf { it > 0.0 } ?: 1.0
+                    val userWidth = (geometry.windowWidthPx / scale).roundToInt()
+                    val userHeight = (geometry.windowHeightPx / scale).roundToInt()
+                    window.setSize(userWidth, userHeight)
                     val position = DisplayInfo.topCenterPosition(
-                        width = geometry.windowWidthPx,
-                        height = geometry.windowHeightPx,
+                        width = userWidth,
+                        height = userHeight,
                         topMargin = 0,
                         monitorIndex = settings.current.monitorIndex,
                     )
                     window.setLocation(position.x, position.y)
                     islandBounds = Rectangle(
-                        position.x + geometry.paddingPx,
+                        position.x + (geometry.paddingPx / scale).roundToInt(),
                         position.y,
-                        geometry.islandWidthPx,
-                        geometry.islandHeightPx,
+                        (geometry.islandWidthPx / scale).roundToInt(),
+                        (geometry.islandHeightPx / scale).roundToInt(),
                     )
                     Log.d(
                         "geometry window=" + geometry.windowWidthPx + "x" + geometry.windowHeightPx +
@@ -474,7 +496,7 @@ private fun ApplicationScope.XTrayApplication() {
                             " at " + position.x + "," + position.y
                     )
                     SwingUtilities.invokeLater {
-                        if (!X11Window.applyInputRegion(geometry)) {
+                        if (!NativeWindow.applyInputRegion(geometry)) {
                             Log.d("input region not applied")
                         }
                     }
@@ -484,22 +506,41 @@ private fun ApplicationScope.XTrayApplication() {
     }
 }
 
-private fun createServices(settings: SettingsStore): IslandServices = IslandServices(
-    settings = settings,
-    media = BusctlMediaSource(),
-    clipboard = AwtClipboardWatcher(),
-    clipboardHistory = ClipboardHistory(maxItems = 50),
-    shelf = ShelfStore(),
-    battery = SysfsBatterySource(),
-    controls = ShellSystemControls(),
-    activity = LiveActivityController { System.currentTimeMillis() },
-    notifications = NotificationCenter(),
-    autostart = XdgAutostartManager(),
-    fileOpener = DesktopFileOpener(),
-    network = SysfsNetworkSpeedSource(),
-    power = ShellPowerControls(),
-    notificationServer = DbusNotificationServer(),
-)
+private fun createServices(settings: SettingsStore): IslandServices = if (Os.isWindows) {
+    IslandServices(
+        settings = settings,
+        media = WindowsMediaSource(),
+        clipboard = AwtClipboardWatcher(),
+        clipboardHistory = ClipboardHistory(maxItems = 50),
+        shelf = ShelfStore(),
+        battery = WindowsBatterySource(),
+        controls = WindowsSystemControls(),
+        activity = LiveActivityController { System.currentTimeMillis() },
+        notifications = NotificationCenter(),
+        autostart = WindowsAutostartManager(),
+        fileOpener = DesktopFileOpener(),
+        network = WindowsNetworkSpeedSource(),
+        power = WindowsPowerControls(),
+        notificationServer = WindowsNotificationServer(),
+    )
+} else {
+    IslandServices(
+        settings = settings,
+        media = BusctlMediaSource(),
+        clipboard = AwtClipboardWatcher(),
+        clipboardHistory = ClipboardHistory(maxItems = 50),
+        shelf = ShelfStore(),
+        battery = SysfsBatterySource(),
+        controls = ShellSystemControls(),
+        activity = LiveActivityController { System.currentTimeMillis() },
+        notifications = NotificationCenter(),
+        autostart = XdgAutostartManager(),
+        fileOpener = DesktopFileOpener(),
+        network = SysfsNetworkSpeedSource(),
+        power = ShellPowerControls(),
+        notificationServer = DbusNotificationServer(),
+    )
+}
 
 private fun handleCommand(
     command: IpcCommand,

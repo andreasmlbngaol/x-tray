@@ -28,7 +28,25 @@ object Shell {
     }
 
     fun exists(binary: String): Boolean {
+        if (Os.isWindows) return existsOnWindows(binary)
         val path = System.getenv("PATH") ?: return false
         return path.split(File.pathSeparatorChar).any { File(it, binary).canExecute() }
+    }
+
+    private fun existsOnWindows(binary: String): Boolean {
+        val path = System.getenv("PATH") ?: return false
+        val extensions = (System.getenv("PATHEXT") ?: ".EXE;.BAT;.CMD")
+            .split(';')
+            .filter { it.isNotBlank() }
+            .map { it.trim().lowercase() }
+        val hasExtension = extensions.any { binary.lowercase().endsWith(it) }
+        return path.split(File.pathSeparatorChar).any { dir ->
+            val candidate = File(dir, binary)
+            if (hasExtension) {
+                candidate.canExecute()
+            } else {
+                extensions.any { extension -> File(dir, binary + extension).canExecute() }
+            }
+        }
     }
 }

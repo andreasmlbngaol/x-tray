@@ -8,6 +8,7 @@
 [![Compose Multiplatform](https://img.shields.io/badge/Compose%20Multiplatform-1.13-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white)](https://www.jetbrains.com/compose-multiplatform/)
 [![Material 3 Expressive](https://img.shields.io/badge/Material%203-Expressive-6750A4?style=for-the-badge&logo=materialdesign&logoColor=white)](https://m3.material.io/)
 [![Linux](https://img.shields.io/badge/Linux-X11%20%7C%20Wayland-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://kernel.org/)
+[![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://www.microsoft.com/windows)
 [![Release](https://img.shields.io/github/v/release/andreasmlbngaol/x-tray?style=for-the-badge&logo=github&color=6E40C9)](https://github.com/andreasmlbngaol/x-tray/releases)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-D22128?style=for-the-badge&logo=apache&logoColor=white)](./LICENSE)
 
@@ -90,35 +91,49 @@ back on its own.
 
 ## Install
 
-### From a release
+### From a release (Linux)
 
 Download the latest `.deb` from [Releases](https://github.com/andreasmlbngaol/x-tray/releases),
 then:
 
 ```bash
-sudo apt install ./x-tray_1.0.4_amd64.deb
+sudo apt install ./x-tray_1.1.0_amd64.deb
 ```
 
 Start **X-Tray** from your app menu. The package bundles its own Java runtime,
 so you do not need a JDK.
+
+### From a release (Windows)
+
+Download the latest `.msi` from [Releases](https://github.com/andreasmlbngaol/x-tray/releases)
+and run it. The installer is per-user, so it needs no administrator rights.
+
+Start **X-Tray** from the Start menu. Like the Linux package it bundles its own
+Java runtime.
 
 ### From source
 
 You need JDK 21.
 
 ```bash
-./gradlew :app:run
+./gradlew :app:run          # Linux and macOS
+.\gradlew.bat :app:run      # Windows
 ```
 
 Build the package yourself:
 
 ```bash
-./gradlew :app:packageReleaseDeb
+./gradlew :app:packageReleaseDeb    # Linux
+.\gradlew.bat :app:packageReleaseMsi # Windows, needs WiX Toolset 3
 ```
+
+jpackage only builds for the host system, which is why the release workflow has
+one job per platform.
 
 ## Quick commands
 
-While the app is running, commands go to the same instance over a Unix socket:
+While the app is running, commands go to the same instance over a local socket
+(a Unix socket on Linux, a loopback port on Windows):
 
 ```bash
 x-tray toggle        # open or close the expanded panel
@@ -131,7 +146,9 @@ x-tray quit
 ```
 
 Running `x-tray` again with no arguments does not open a second window; it just
-brings the running one forward.
+brings the running one forward. On Windows the executable is `x-tray.exe`, and
+commands reach the running instance over a loopback socket instead of a Unix
+socket.
 
 ## Settings worth knowing
 
@@ -147,11 +164,18 @@ brings the running one forward.
 
 ## Notes
 
-- Works on X11 and on Wayland through XWayland.
-- Notification takeover relies on the GNOME notification helper. On other
-  desktops X-Tray leaves the original notifications alone.
+- Works on X11 and on Wayland through XWayland, and on Windows 10/11.
+- Notification takeover relies on the GNOME notification helper, so the setting
+  only appears on Linux. Windows keeps its own toasts; the island still shows
+  focus-timer alerts and `x-tray notify` messages.
+- Windows media comes from the system media session (SMTC), volume from Core
+  Audio, and brightness from Dxva2 on the built-in panel. Wi-Fi and Bluetooth
+  have no unprivileged Windows API, so those toggles stay hidden.
+- Autostart writes an XDG entry on Linux and a per-user Run key on Windows.
 - The tray icon needs the AppIndicator extension on GNOME.
 - Clipboard and shelf are kept in memory only, for as long as the app runs.
+- The island is click-through outside its visible shape on both platforms: an
+  X11 input shape on Linux, a `WM_NCHITTEST` hook on Windows.
 
 ## License
 
