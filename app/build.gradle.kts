@@ -34,7 +34,9 @@ compose.desktop {
             // which lives in jdk.security.auth and is not part of the default image.
             modules("jdk.security.auth", "java.security.sasl")
             packageName = "x-tray"
-            packageVersion = providers.gradleProperty("appVersion").getOrElse("1.0.0")
+            packageVersion = providers.environmentVariable("XTRAY_VERSION")
+                .orElse(providers.gradleProperty("appVersion"))
+                .getOrElse("1.0.0")
             description = "A Dynamic Island for your desktop"
             vendor = "X-Tray"
             copyright = "(c) 2026 X-Tray"
