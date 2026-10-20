@@ -64,7 +64,8 @@ class ControlsModule(private val services: IslandServices) : IslandModule {
     override val id = "controls"
     override val title = "Controls"
     override val icon: ImageVector = Icons.Rounded.Tune
-    override val priority = 40
+    /** First in the rail and the default tab: controls are what people reach for. */
+    override val priority = 110
 
     @Composable
     override fun PeekContent() {
@@ -234,6 +235,11 @@ class ControlsModule(private val services: IslandServices) : IslandModule {
                         },
                     )
                 }
+            }
+
+            if (services.settings.current.mediaEnabled && services.mediaTrack != null) {
+                Spacer(modifier = Modifier.height(6.dp))
+                MediaPlayerCard(services)
             }
         }
     }

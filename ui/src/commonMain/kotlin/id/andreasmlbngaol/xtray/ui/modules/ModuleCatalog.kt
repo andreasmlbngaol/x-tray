@@ -5,19 +5,21 @@ import id.andreasmlbngaol.xtray.core.settings.IslandSettings
 import id.andreasmlbngaol.xtray.ui.services.IslandServices
 
 object ModuleCatalog {
+    /**
+     * Media has no rail entry of its own: the player card lives at the bottom
+     * of Controls.
+     */
     fun create(services: IslandServices): List<IslandModule> = listOf(
-        MediaModule(services),
+        ControlsModule(services),
         FocusModule(services),
         ClipboardModule(services),
         ShelfModule(services),
-        ControlsModule(services),
         SettingsModule(services),
     )
 
     fun filter(modules: List<IslandModule>, settings: IslandSettings): List<IslandModule> =
         modules.filter { module ->
             when (module.id) {
-                "media" -> settings.mediaEnabled
                 "clipboard" -> settings.clipboardEnabled
                 "shelf" -> settings.shelfEnabled
                 "controls" -> settings.controlsEnabled

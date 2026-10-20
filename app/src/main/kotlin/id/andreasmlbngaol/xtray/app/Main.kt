@@ -57,7 +57,9 @@ import java.awt.Color
 import java.awt.Dimension
 import java.awt.Graphics2D
 import java.awt.MenuItem
+import java.awt.MouseInfo
 import java.awt.PopupMenu
+import java.awt.Rectangle
 import java.awt.RenderingHints
 import java.awt.SystemTray
 import java.awt.TrayIcon
@@ -165,6 +167,22 @@ private fun ApplicationScope.XTrayApplication() {
     var hidden by remember { mutableStateOf(false) }
     var fullscreen by remember { mutableStateOf(false) }
     var maximized by remember { mutableStateOf(false) }
+
+    // The window is resized under the pointer (collapsed -> peek -> dormant)
+    // and Compose loses its hover state on those resizes. Polling the real
+    // pointer keeps hover and the right-click hide from fighting each other.
+    var islandHovered by remember { mutableStateOf(false) }
+    var islandBounds by remember { mutableStateOf(Rectangle(0, 0, 0, 0)) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            val pointer = runCatching { MouseInfo.getPointerInfo()?.location }.getOrNull()
+            val bounds = islandBounds
+            val inside = pointer != null && bounds.width > 0 && bounds.height > 0 && bounds.contains(pointer)
+            if (inside != islandHovered) islandHovered = inside
+            delay(60L)
+        }
+    }
 
     fun requestState(target: IslandState) {
         requestCounter += 1L
@@ -372,6 +390,7 @@ private fun ApplicationScope.XTrayApplication() {
                 stateRequest = stateRequest,
                 initialModuleId = System.getenv("XTRAY_MODULE"),
                 dormant = hidden || fullscreen || (settings.current.hideOverMaximized && maximized),
+                hovered = islandHovered,
                 onStateChange = {
                     islandState = it
                     // Opening peek or expanded means the island is in use again:
@@ -394,6 +413,12 @@ private fun ApplicationScope.XTrayApplication() {
                         monitorIndex = settings.current.monitorIndex,
                     )
                     window.setLocation(position.x, position.y)
+                    islandBounds = Rectangle(
+                        position.x + geometry.paddingPx,
+                        position.y,
+                        geometry.islandWidthPx,
+                        geometry.islandHeightPx,
+                    )
                     Log.d(
                         "geometry window=" + geometry.windowWidthPx + "x" + geometry.windowHeightPx +
                             " island=" + geometry.islandWidthPx + "x" + geometry.islandHeightPx +

@@ -16,7 +16,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -81,6 +80,12 @@ fun XTray(
     stateRequest: IslandStateRequest? = null,
     initialModuleId: String? = null,
     dormant: Boolean = false,
+    /**
+     * Pointer position over the island, polled by the app layer. Compose's own
+     * hover state gets lost when the native window is resized under the
+     * pointer (peek to dormant), which used to leave peek stuck.
+     */
+    hovered: Boolean = false,
     onStateChange: (IslandState) -> Unit = {},
     onGeometryChanged: (IslandGeometry) -> Unit = {},
     onRequestHide: () -> Unit = {},
@@ -120,7 +125,7 @@ fun XTray(
     }
 
     val interactionSource = remember { MutableInteractionSource() }
-    val isHovered by interactionSource.collectIsHoveredAsState()
+    val isHovered = hovered
     var isDragOver by remember { mutableStateOf(false) }
 
     fun publish() {
@@ -331,6 +336,12 @@ fun XTray(
                             while (true) {
                                 val event = awaitPointerEvent()
                                 if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
+                                    // Dismiss first so hover stays suppressed until the
+                                    // pointer leaves; otherwise the pending hover tick
+                                    // reopens peek right after the hide.
+                                    machine.onDismiss()
+                                    publish()
+                                    hoverEpoch++
                                     onRequestHide()
                                 }
                             }
