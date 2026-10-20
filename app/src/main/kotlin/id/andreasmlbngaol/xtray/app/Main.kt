@@ -58,11 +58,14 @@ import java.awt.Dimension
 import java.awt.Graphics2D
 import java.awt.MenuItem
 import java.awt.MouseInfo
+import java.awt.Point
 import java.awt.PopupMenu
 import java.awt.Rectangle
 import java.awt.RenderingHints
 import java.awt.SystemTray
 import java.awt.TrayIcon
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import java.awt.image.BufferedImage
 import javax.swing.SwingUtilities
 import kotlin.system.exitProcess
@@ -175,11 +178,18 @@ private fun ApplicationScope.XTrayApplication() {
     var islandBounds by remember { mutableStateOf(Rectangle(0, 0, 0, 0)) }
 
     LaunchedEffect(Unit) {
+        var last: Point? = null
         while (true) {
             val pointer = runCatching { MouseInfo.getPointerInfo()?.location }.getOrNull()
-            val bounds = islandBounds
-            val inside = pointer != null && bounds.width > 0 && bounds.height > 0 && bounds.contains(pointer)
-            if (inside != islandHovered) islandHovered = inside
+            if (pointer != null && pointer != last) {
+                last = pointer
+                val bounds = islandBounds
+                val inside = bounds.width > 0 && bounds.height > 0 && bounds.contains(pointer)
+                if (inside != islandHovered) {
+                    islandHovered = inside
+                    Log.d("hover=" + inside + " pointer=" + pointer.x + "," + pointer.y)
+                }
+            }
             delay(60L)
         }
     }
@@ -332,6 +342,23 @@ private fun ApplicationScope.XTrayApplication() {
             }
         },
     ) {
+        // AWT enter/exit comes from the compositor, so it still fires when the
+        // pointer moves onto a native Wayland surface (where XWayland freezes
+        // the X pointer and the poll below stops seeing movement).
+        DisposableEffect(window) {
+            val listener = object : MouseAdapter() {
+                override fun mouseEntered(event: MouseEvent) {
+                    islandHovered = true
+                }
+
+                override fun mouseExited(event: MouseEvent) {
+                    islandHovered = false
+                }
+            }
+            window.addMouseListener(listener)
+            onDispose { window.removeMouseListener(listener) }
+        }
+
         LaunchedEffect(Unit) {
             window.isAutoRequestFocus = false
             window.addWindowFocusListener(object : java.awt.event.WindowFocusListener {

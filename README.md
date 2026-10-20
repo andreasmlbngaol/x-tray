@@ -96,7 +96,7 @@ Download the latest `.deb` from [Releases](https://github.com/andreasmlbngaol/x-
 then:
 
 ```bash
-sudo apt install ./x-tray_1.0.2_amd64.deb
+sudo apt install ./x-tray_1.0.3_amd64.deb
 ```
 
 Start **X-Tray** from your app menu. The package bundles its own Java runtime,
