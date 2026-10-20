@@ -115,7 +115,7 @@ class ControlsModule(private val services: IslandServices) : IslandModule {
 
         Column(
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             LevelCard(
                 title = "Volume",
@@ -238,7 +238,7 @@ class ControlsModule(private val services: IslandServices) : IslandModule {
             }
 
             if (services.settings.current.mediaEnabled && services.mediaTrack != null) {
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 MediaPlayerCard(services)
             }
         }

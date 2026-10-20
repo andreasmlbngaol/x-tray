@@ -2,7 +2,7 @@
 
 # X-Tray
 
-**Dynamic Island untuk desktop Linux.**
+**A Dynamic Island for the Linux desktop.**
 
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.4.21-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
 [![Compose Multiplatform](https://img.shields.io/badge/Compose%20Multiplatform-1.13-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white)](https://www.jetbrains.com/compose-multiplatform/)
@@ -11,154 +11,154 @@
 [![Release](https://img.shields.io/github/v/release/andreasmlbngaol/x-tray?style=for-the-badge&logo=github&color=6E40C9)](https://github.com/andreasmlbngaol/x-tray/releases)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-D22128?style=for-the-badge&logo=apache&logoColor=white)](./LICENSE)
 
-<img src="docs/images/hero.png" alt="X-Tray dalam mode closed di tengah atas layar" width="760">
+<img src="docs/images/hero.png" alt="X-Tray closed, docked at the top centre of the screen" width="760">
 
 </div>
 
-X-Tray adalah satu panel kecil yang menempel di tengah atas layar. Saat tidak
-dipakai ia cuma selebar 300 px: jam, tanggal, kecepatan internet, dan baterai.
-Begitu kursor mendekat ia membesar untuk menampilkan musik dan notifikasi, dan
-kalau diklik ia terbuka penuh berisi kontrol cepat, clipboard, timer fokus,
-shelf, dan pengaturan.
+X-Tray is a single panel that sits at the top centre of your screen. At rest it
+is only 300 px wide: the time, the date, network speed, and the battery. When
+your pointer gets close it grows to show what is playing and the latest
+notification, and when you click it, it opens fully with quick controls, the
+clipboard, a focus timer, the shelf, and settings.
 
-Tidak ada window yang perlu dibuka, tidak ada ikon tambahan di taskbar. Semua
-yang biasanya tersebar di beberapa tempat diringkas jadi satu panel yang bisa
-dipanggil kapan saja.
+No window to keep around, no extra taskbar icon. Everything you usually look
+for in five different places lives in one panel you can summon from the top
+edge.
 
-## Yang bisa kamu lakukan
+## What it does
 
-- **Lihat sekilas tanpa klik.** Jam, tanggal, kecepatan upload/download, dan
-  baterai selalu ada di bar kecil itu.
-- **Dengar musik tanpa pindah aplikasi.** Judul, artis, dan album muncul di
-  peek; tombol putar, sebelumnya, dan berikutnya ada di sana.
-- **Baca notifikasi di satu tempat.** X-Tray mengambil alih notifikasi desktop,
-  jadi popup bawaan berhenti dan semua notifikasi masuk ke island.
-- **Atur volume dan kecerahan.** Dua slider, plus tombol mic, Wi-Fi, Bluetooth,
-  DND, mode gelap, dan airplane.
-- **Salin ulang teks lama.** Riwayat clipboard tersimpan selama aplikasi
-  berjalan; klik satu item untuk menyalinnya lagi.
-- **Simpan file sementara.** Tarik file ke island, lihat thumbnail gambar dan
-  video, buka atau hapus saat hover, dan tarik keluar lagi ke file manager.
-- **Fokus tanpa gangguan.** Timer dengan durasi bebas, hitung mundur besar di
-  peek, dan notifikasi saat sesi selesai.
-- **Sembunyikan saat tidak perlu.** Klik kanan membuatnya jadi garis tipis 120x6
-  di tepi atas; hover membukanya lagi.
+- **Glanceable at rest.** Time, date, upload and download speed, battery.
+- **Music without switching apps.** Title, artist, and album show up in peek,
+  with play, previous, and next buttons.
+- **One place for notifications.** X-Tray takes over desktop notifications, so
+  the stock popups stop and everything lands in the island.
+- **Volume and brightness.** Two sliders, plus mic, Wi-Fi, Bluetooth, do not
+  disturb, dark mode, and airplane.
+- **Clipboard history.** Every copied text stays in memory while the app runs;
+  click one to copy it again.
+- **A shelf for files.** Drag files onto the island, see thumbnails for images
+  and videos, open or delete them on hover, and drag them back out.
+- **Focus timer.** Type any duration, watch it count down in peek, get a
+  notification when the session ends.
+- **Out of the way when you want.** Right click shrinks it to a 120x6 hairline
+  at the top edge; hovering brings it back.
 
-## Tiga cara memakainya
+## How you use it
 
-<img src="docs/images/states.png" alt="Mode peek dan kartu notifikasi" width="900">
+<img src="docs/images/states.png" alt="Peek and the notification card" width="900">
 
-| Aksi | Yang terjadi |
+| You do | What happens |
 |---|---|
-| Diamkan | Bar kecil: jam, tanggal, kecepatan internet, baterai |
-| Arahkan kursor | Peek: jam bertumpuk, musik, notifikasi terbaru |
-| Klik | Expanded: semua modul terbuka |
-| Klik kanan | Menjadi garis tipis di tepi atas |
-| Tarik file | Shelf terbuka dan file masuk ke sana |
-| Esc / klik di luar | Menutup kembali ke bar kecil |
+| Leave it alone | Small bar: time, date, network speed, battery |
+| Move the pointer over it | Peek: stacked clock, music, latest notification |
+| Click | Expanded: every module |
+| Right click | Collapses to a hairline at the top edge |
+| Drag a file onto it | The shelf opens and takes the file |
+| Esc or click outside | Back to the small bar |
 
-Peek menutup sendiri saat kursor pergi. Expanded hanya menutup kalau kamu
-menekan Esc, mengklik di luar, atau berpindah window.
+Peek closes by itself when the pointer leaves. Expanded only closes on Esc, a
+click outside, or when you switch windows.
 
-## Expanded
+## The expanded panel
 
-<img src="docs/images/expanded.png" alt="X-Tray expanded dengan tab Controls" width="420">
+<img src="docs/images/expanded.png" alt="X-Tray expanded on the Controls tab" width="420">
 
-Rail di kiri berisi lima tab, dan **Controls** adalah tab pertama yang terbuka:
+The rail on the left has five tabs, and **Controls** is the one that opens by
+default:
 
-- **Controls** — volume, kecerahan, mic, Wi-Fi, Bluetooth, DND, mode gelap,
-  airplane, dan pemutar musik lengkap di bawah tombol-tombol itu.
-- **Focus** — timer fokus dengan durasi yang bisa diketik.
-- **Clipboard** — riwayat teks, klik untuk menyalin ulang.
-- **Shelf** — file yang kamu tarik ke island.
-- **Settings** — tema, warna aksen, reduce motion, autostart, perilaku hover,
-  pengambilalihan notifikasi, dan reset.
+- **Controls** — volume, brightness, mic, Wi-Fi, Bluetooth, do not disturb,
+  dark mode, airplane mode, and the full music player right under the buttons.
+- **Focus** — a focus timer with a duration you can type.
+- **Clipboard** — text history, click to copy again.
+- **Shelf** — the files you dragged onto the island.
+- **Settings** — theme, accent colour, reduce motion, autostart, hover timing,
+  notification takeover, and reset.
 
-Header di atas berisi jam, tanggal, kecepatan jaringan, tombol power, dan
-tombol tutup.
+The header above holds the clock, the date, network speed, a power menu, and the
+close button.
 
-## Notifikasi
+## Notifications
 
-Selama X-Tray berjalan, ia menjadi penerima notifikasi desktop. Saat bar dalam
-keadaan kecil, notifikasi masuk sebagai kartu 384x100 berisi nama aplikasi,
-judul, isi, dan tombol tutup. Saat peek, notifikasi muncul di baris bawah. Saat
-expanded, ia jadi banner di atas modul.
+While X-Tray runs, it is the desktop notification receiver. When the bar is
+small, a notification appears as a 384x100 card with the app name, title, body,
+and a close button. In peek it shows on the bottom row. In expanded it becomes a
+banner above the active module.
 
-Kalau kamu lebih suka popup bawaan desktop, matikan **Replace system
-notifications** di Settings. Saat X-Tray keluar, notifikasi desktop kembali
-normal dengan sendirinya.
+If you would rather keep the stock popups, turn off **Replace system
+notifications** in Settings. When X-Tray exits, the desktop gets notifications
+back on its own.
 
-## Pasang
+## Install
 
-### Dari rilis
+### From a release
 
-Unduh `.deb` terbaru dari [Releases](https://github.com/andreasmlbngaol/x-tray/releases),
-lalu:
+Download the latest `.deb` from [Releases](https://github.com/andreasmlbngaol/x-tray/releases),
+then:
 
 ```bash
-sudo apt install ./x-tray_1.0.1_amd64.deb
+sudo apt install ./x-tray_1.0.2_amd64.deb
 ```
 
-Setelah itu jalankan **X-Tray** dari menu aplikasi. Paket ini sudah membawa
-runtime Java-nya sendiri, jadi tidak perlu memasang JDK.
+Start **X-Tray** from your app menu. The package bundles its own Java runtime,
+so you do not need a JDK.
 
-### Dari source
+### From source
 
-Butuh JDK 21.
+You need JDK 21.
 
 ```bash
 ./gradlew :app:run
 ```
 
-Membuat paket sendiri:
+Build the package yourself:
 
 ```bash
 ./gradlew :app:packageReleaseDeb
 ```
 
-## Perintah cepat
+## Quick commands
 
-Saat aplikasi berjalan, perintah dikirim ke instance yang sama lewat socket:
+While the app is running, commands go to the same instance over a Unix socket:
 
 ```bash
-x-tray toggle        # buka/tutup expanded
-x-tray show          # tampilkan bar
-x-tray hide          # jadi garis tipis
-x-tray notify "Halo" # kirim notifikasi ke island
-x-tray dnd on        # jangan ganggu
-x-tray activity start 25 "Tulis laporan"
+x-tray toggle        # open or close the expanded panel
+x-tray show          # bring the bar back
+x-tray hide          # shrink to the hairline
+x-tray notify "Hi"   # send a notification into the island
+x-tray dnd on        # do not disturb
+x-tray activity start 25 "Write the report"
 x-tray quit
 ```
 
-Menjalankan `x-tray` lagi tanpa argumen tidak membuka window baru; ia hanya
-memunculkan instance yang sudah ada.
+Running `x-tray` again with no arguments does not open a second window; it just
+brings the running one forward.
 
-## Pengaturan yang sering dipakai
+## Settings worth knowing
 
-| Pengaturan | Gunanya |
+| Setting | What it does |
 |---|---|
-| Tema | Ikut sistem, selalu terang, atau selalu gelap |
-| Warna aksen | Lima preset atau kode HEX sendiri |
-| Reduce motion | Mematikan animasi kalau terasa mengganggu |
-| Autostart | Menjalankan X-Tray saat login |
-| Hide over maximized | Menyusut jadi garis saat ada window maximized |
-| Replace system notifications | Mengambil alih notifikasi desktop |
-| Jeda hover / tutup | Seberapa cepat peek terbuka dan menutup |
+| Theme | Follow the system, always light, or always dark |
+| Accent colour | Five presets or your own HEX code |
+| Reduce motion | Turns animations off |
+| Autostart | Start X-Tray when you log in |
+| Hide over maximized | Shrinks to the hairline while a maximized window is focused |
+| Replace system notifications | Takes over desktop notifications |
+| Hover and close delay | How quickly peek opens and closes |
 
-## Catatan
+## Notes
 
-- Berjalan di X11 dan di Wayland lewat XWayland.
-- Pengambilalihan notifikasi memakai helper notifikasi GNOME. Di desktop lain
-  X-Tray membiarkan notifikasi asli tetap hidup.
-- Ikon tray di GNOME perlu ekstensi AppIndicator.
-- Clipboard dan shelf hanya tersimpan selama aplikasi berjalan.
+- Works on X11 and on Wayland through XWayland.
+- Notification takeover relies on the GNOME notification helper. On other
+  desktops X-Tray leaves the original notifications alone.
+- The tray icon needs the AppIndicator extension on GNOME.
+- Clipboard and shelf are kept in memory only, for as long as the app runs.
 
-## Lisensi
+## License
 
-Kode X-Tray memakai **Apache License 2.0**. Lihat [LICENSE](./LICENSE).
+X-Tray is licensed under the **Apache License 2.0**. See [LICENSE](./LICENSE).
 
-Font **Google Sans Flex** dipakai dengan lisensi SIL Open Font License 1.1
-(`docs/licenses/google_sans_flex_OFL.txt`). PixelPlayer hanya dipelajari
-sebagai referensi desain; tidak ada kode atau asetnya yang disalin.
+The **Google Sans Flex** font is used under the SIL Open Font License 1.1
+(`docs/licenses/google_sans_flex_OFL.txt`). PixelPlayer was studied as a design
+reference only; none of its code or assets were copied.
 
 Copyright 2026 Andreas M Lbn Gaol

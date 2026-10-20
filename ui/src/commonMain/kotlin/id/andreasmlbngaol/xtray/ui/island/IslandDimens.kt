@@ -56,7 +56,8 @@ object IslandDimens {
 
     val Expanded = IslandSize(
         width = 460.dp,
-        height = 620.dp,
+        // Tall enough for Controls with the player card and its progress rows.
+        height = 660.dp,
         bottomRadius = 34.dp,
         filletRadius = 12.dp,
     )
