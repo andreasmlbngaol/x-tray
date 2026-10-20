@@ -172,23 +172,37 @@ private fun ApplicationScope.XTrayApplication() {
     var maximized by remember { mutableStateOf(false) }
 
     // The window is resized under the pointer (collapsed -> peek -> dormant)
-    // and Compose loses its hover state on those resizes. Polling the real
-    // pointer keeps hover and the right-click hide from fighting each other.
+    // and Compose loses its hover state on those resizes, so the app layer owns
+    // hover: the compositor's enter/exit plus a poll of the X pointer. Both
+    // share a [PointerGate] because XWayland freezes the X pointer over native
+    // Wayland surfaces and the stale sample must not win over a real exit.
     var islandHovered by remember { mutableStateOf(false) }
     var islandBounds by remember { mutableStateOf(Rectangle(0, 0, 0, 0)) }
+    val pointerGate = remember { PointerGate() }
 
     LaunchedEffect(Unit) {
-        var last: Point? = null
+        var tick = 0
         while (true) {
+            tick++
             val pointer = runCatching { MouseInfo.getPointerInfo()?.location }.getOrNull()
-            if (pointer != null && pointer != last) {
-                last = pointer
+            if (pointer != null && pointerGate.last == null) {
+                // Baseline only: a sample taken at startup may be stale, so it
+                // must not open peek on its own.
+                pointerGate.last = pointer
+            } else if (pointer != null && pointer != pointerGate.last) {
+                pointerGate.last = pointer
                 val bounds = islandBounds
                 val inside = bounds.width > 0 && bounds.height > 0 && bounds.contains(pointer)
                 if (inside != islandHovered) {
                     islandHovered = inside
                     Log.d("hover=" + inside + " pointer=" + pointer.x + "," + pointer.y)
                 }
+            }
+            if (tick % 166 == 0) {
+                Log.d(
+                    "poll pointer=" + (pointer?.x ?: -1) + "," + (pointer?.y ?: -1) +
+                        " bounds=" + islandBounds + " hovered=" + islandHovered,
+                )
             }
             delay(60L)
         }
@@ -348,10 +362,18 @@ private fun ApplicationScope.XTrayApplication() {
         DisposableEffect(window) {
             val listener = object : MouseAdapter() {
                 override fun mouseEntered(event: MouseEvent) {
+                    Log.d("awt enter " + event.x + "," + event.y + " bounds=" + islandBounds)
                     islandHovered = true
                 }
 
                 override fun mouseExited(event: MouseEvent) {
+                    // XWayland freezes the X pointer the moment the cursor lands
+                    // on a native Wayland surface, so the current sample still
+                    // reads as "inside". Mark it as handled; otherwise the poll
+                    // below would immediately undo this exit.
+                    pointerGate.last =
+                        runCatching { MouseInfo.getPointerInfo()?.location }.getOrNull()
+                    Log.d("awt exit")
                     islandHovered = false
                 }
             }
@@ -590,6 +612,18 @@ private fun trayImage(): BufferedImage {
     graphics.fillOval(13, 14, 6, 6)
     graphics.dispose()
     return image
+}
+
+/**
+ * Remembers the last X pointer sample the island already reacted to.
+ *
+ * XWayland stops updating the X pointer as soon as the cursor is over a native
+ * Wayland surface, so the final sample can stay inside the island long after
+ * the pointer left. Sharing the sample between the poll and the AWT listener
+ * lets the compositor's exit mark it as handled instead of being undone.
+ */
+private class PointerGate {
+    var last: Point? = null
 }
 
 /**

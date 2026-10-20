@@ -95,22 +95,30 @@ dipakai kembali.
 Hover tidak boleh bergantung pada satu sumber saja:
 
 - `MouseInfo`/XQueryPointer **membeku** selama pointer berada di atas surface
-  Wayland native. Kalau hover hanya dibaca dari posisi itu, peek tidak pernah
-  menutup karena posisi terakhir yang terlihat masih di dalam island.
+  Wayland native. Sampel terakhir tetap terbaca di dalam island walaupun
+  kursor sudah pergi.
 - Event enter/exit AWT tetap datang dari compositor saat pointer pindah ke
-  surface native, jadi event itu yang menjadi sumber utama.
-- Polling posisi tetap dipakai sebagai cadangan, tetapi hanya bereaksi kalau
-  posisi pointer benar-benar berubah. Posisi yang membeku tidak boleh
-  mengunci hover.
+  surface native, jadi event itu yang menjadi otoritas untuk "keluar".
+- Polling posisi tetap dipakai sebagai cadangan untuk "masuk", tetapi hanya
+  bereaksi kalau posisi pointer benar-benar berubah.
 
-Bukti: pada build 1.0.3, log debug `hover=` tidak pernah muncul selama lima
-siklus hover masuk/keluar, artinya seluruh perubahan hover berasal dari event
-AWT, dan setiap keluar kembali ke 324x50.
+Bug di 1.0.3: `mouseExited` sebenarnya datang, lalu poll beberapa puluh
+milidetik kemudian membaca sampel X yang membeku dan mengembalikan hover ke
+`true`, sehingga peek terkunci:
+
+    [09:52:15.933] DEBUG awt exit
+    [09:52:15.973] DEBUG hover=true pointer=1060,36
+
+Sejak 1.0.4 keduanya berbagi `PointerGate`: `mouseExited` menandai sampel
+yang membeku sebagai sudah diproses sehingga poll tidak bisa membatalkannya,
+dan sampel pertama saat start hanya dipakai sebagai baseline. Terverifikasi
+dengan kursor fisik: setiap keluar dari peek kembali ke `Collapsed` dalam
+~200 ms (collapse delay).
 
 - `xdotool mousemove` lewat XTest **tidak** diandalkan untuk memicu hover di
   permukaan XWayland; event dapat tidak sampai ke window Compose.
-- Namun hover dengan kursor fisik **bekerja**: saat kursor berada di atas
-  island, state berubah `Collapsed -> Peek` setelah hover intent 180 ms.
+- Hover dengan kursor fisik bekerja: kursor di atas island mengubah state
+  `Collapsed -> Peek` setelah hover intent 180 ms.
 - Perilaku final: peek tidak pernah membuka expanded sendiri; klik yang
   membuka expanded. Kursor keluar dari peek menutup peek; expanded
   mengabaikan gerakan kursor dan hanya menutup lewat Esc, klik di luar
