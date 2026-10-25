@@ -25,13 +25,24 @@ object IslandDimens {
     )
 
     /**
-     * Notification card: wider and taller than the collapsed bar so a sender,
-     * a title and a couple of body lines fit without truncating to one word.
+     * Notification card: hugs its content up to [NotificationMaxWidth]. The
+     * compact height keeps it a banner rather than a panel.
      */
+    val NotificationMinWidth = 320.dp
+    val NotificationMaxWidth = 560.dp
+    val NotificationHeight = 80.dp
+
     val Notification = IslandSize(
-        width = 384.dp,
-        height = 100.dp,
-        bottomRadius = 30.dp,
+        width = NotificationMinWidth,
+        height = NotificationHeight,
+        bottomRadius = 28.dp,
+        filletRadius = 12.dp,
+    )
+
+    fun notification(width: Dp): IslandSize = IslandSize(
+        width = width.coerceIn(NotificationMinWidth, NotificationMaxWidth),
+        height = NotificationHeight,
+        bottomRadius = 28.dp,
         filletRadius = 12.dp,
     )
 

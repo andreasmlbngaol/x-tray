@@ -289,12 +289,17 @@ private fun ApplicationScope.XTrayApplication() {
                 onNotification = { incoming ->
                     SwingUtilities.invokeLater {
                         if (!services.settings.current.doNotDisturb) {
-                            services.notifications.push(incoming.appName, incoming.title, incoming.body)
-                            hidden = false
+                            services.notifications.push(
+                                appName = incoming.appName,
+                                title = incoming.title,
+                                body = incoming.body,
+                                iconBytes = incoming.iconBytes,
+                                sourceId = incoming.notificationId,
+                            )
                         }
                     }
                 },
-                onClosed = { SwingUtilities.invokeLater { services.notifications.dismiss() } },
+                onClosed = { id -> SwingUtilities.invokeLater { services.notifications.dismissSource(id) } },
             )
             Log.i("notification daemon started=" + started)
         }
@@ -540,7 +545,6 @@ private fun handleCommand(
         } else {
             SwingUtilities.invokeLater {
                 services.notifications.push("X-Tray", "", command.message)
-                setHidden(false)
             }
             "ok"
         }

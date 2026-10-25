@@ -6,6 +6,10 @@ data class IncomingNotification(
     val title: String,
     val body: String,
     val appIcon: String = "",
+    /** PNG bytes resolved from the sender's icon hints or desktop entry. */
+    val iconBytes: ByteArray? = null,
+    /** Id the sender used on the bus, so a click can activate the right app. */
+    val notificationId: Long = 0L,
 )
 
 /**
@@ -19,8 +23,15 @@ interface SystemNotificationServer {
 
     fun start(
         onNotification: (IncomingNotification) -> Unit,
-        onClosed: () -> Unit,
+        onClosed: (Long) -> Unit,
     ): Boolean
 
     fun stop()
+
+    /**
+     * Opens the application that sent notification [id]: first through its
+     * "default" action, otherwise by launching its desktop entry. Returns
+     * false when no activation route is known.
+     */
+    fun activate(id: Long): Boolean = false
 }

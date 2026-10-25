@@ -93,6 +93,44 @@ class ShellSystemControls : SystemControls {
         Shell.run("bluetoothctl", "power", if (enabled) "off" else "on")
     }
 
+    /**
+     * GNOME and KDE use different panel identifiers; try both before giving
+     * up. Launchers return immediately, so openSettings does not block the UI.
+     */
+    override fun openSettings(page: SystemSettingsPage): Boolean {
+        val gnome = when (page) {
+            SystemSettingsPage.Sound -> "sound"
+            SystemSettingsPage.Wifi -> "wifi"
+            SystemSettingsPage.Bluetooth -> "bluetooth"
+            SystemSettingsPage.Network -> "network"
+            SystemSettingsPage.Power -> "power"
+            SystemSettingsPage.Display -> "display"
+            SystemSettingsPage.Notifications -> "notifications"
+            SystemSettingsPage.Appearance -> "appearance"
+        }
+        val kde = when (page) {
+            SystemSettingsPage.Sound -> "kcm_pulseaudio"
+            SystemSettingsPage.Wifi -> "kcm_networkmanagement"
+            SystemSettingsPage.Bluetooth -> "kcm_bluetooth"
+            SystemSettingsPage.Network -> "kcm_networkmanagement"
+            SystemSettingsPage.Power -> "kcm_powerdevil"
+            SystemSettingsPage.Display -> "kcm_kscreen"
+            SystemSettingsPage.Notifications -> "kcm_notifications"
+            SystemSettingsPage.Appearance -> "kcm_lookandfeel"
+        }
+        if (Shell.exists("gnome-control-center") && Shell.launch("gnome-control-center", gnome)) {
+            return true
+        }
+        if (Shell.exists("systemsettings") && Shell.launch("systemsettings", kde)) {
+            return true
+        }
+        for (binary in listOf("kcmshell6", "kcmshell5")) {
+            if (Shell.exists(binary) && Shell.launch(binary, kde)) return true
+        }
+        Log.w("no settings handler for " + page)
+        return false
+    }
+
     private fun volumePercent(): Int? {
         if (!hasWpctl) return null
         val output = Shell.run("wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@") ?: return null

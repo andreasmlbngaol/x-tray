@@ -15,6 +15,10 @@ data class IslandNotification(
     val title: String,
     val body: String,
     val createdAtMs: Long,
+    /** PNG bytes for the sender's app icon, when the desktop bus provided one. */
+    val iconBytes: ByteArray? = null,
+    /** Notification id on the desktop bus; used to activate the sender on click. */
+    val sourceId: Long? = null,
 ) {
     /** Bold first line: the title, or the body when the sender had no title. */
     val headline: String get() = title.ifBlank { body }
@@ -30,13 +34,21 @@ class NotificationCenter(private val clock: () -> Long = { System.currentTimeMil
 
     private var nextId = 1L
 
-    fun push(appName: String, title: String, body: String): IslandNotification {
+    fun push(
+        appName: String,
+        title: String,
+        body: String,
+        iconBytes: ByteArray? = null,
+        sourceId: Long? = null,
+    ): IslandNotification {
         val notification = IslandNotification(
             id = nextId++,
             appName = appName.trim().ifBlank { "Notification" },
             title = title.trim(),
             body = body.trim(),
             createdAtMs = clock(),
+            iconBytes = iconBytes,
+            sourceId = sourceId,
         )
         current = notification
         return notification
@@ -45,6 +57,13 @@ class NotificationCenter(private val clock: () -> Long = { System.currentTimeMil
     /** Dismisses the card, or only the card with [id] when one is given. */
     fun dismiss(id: Long? = null) {
         if (id == null || current?.id == id) {
+            current = null
+        }
+    }
+
+    /** Dismisses the card only when it came from desktop notification [sourceId]. */
+    fun dismissSource(sourceId: Long) {
+        if (current?.sourceId == sourceId) {
             current = null
         }
     }

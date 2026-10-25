@@ -54,6 +54,12 @@ class IslandServices(
 
     var clipboardPaused: Boolean by mutableStateOf(false)
 
+    /**
+     * Navigation hook installed by the island host. Modules use it to jump to
+     * another tab, for example the Settings tile in Controls.
+     */
+    var openModule: (String) -> Unit = {}
+
     fun bump() {
         revision++
     }

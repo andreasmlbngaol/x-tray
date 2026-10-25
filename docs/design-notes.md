@@ -345,7 +345,7 @@ Prinsipnya: expressive dipakai pada **titik interaksi** (tekan, pilih, buka), bu
 | State | Lebar | Tinggi | Padding | Radius | Catatan |
 |---|---|---|---|---|---|
 | Collapsed | 300 dp | 38 dp | 24 dp horizontal | 19 dp | jam + tanggal + speed 2 baris + baterai |
-| Notifikasi | 384 dp | 100 dp | 22/18 dp | 30 dp | kartu saat notifikasi muncul di collapsed |
+| Notifikasi | 320–560 dp (konten) | 80 dp | 26/22 dp | 28 dp | kartu saat notifikasi muncul, termasuk saat hidden |
 | Dormant | 120 dp | 6 dp | 0 | 3 dp | garis saat maximized/fullscreen atau setelah klik kanan |
 | Peek | 420 dp | 140 dp | 26 dp | 34 dp | jam HH/MM/ss + tanggal, media + kontrol, speed + baterai, notifikasi/fokus |
 | Expanded | 460 dp | 620 dp | 20 dp | 34 dp | rail modul + konten (tanpa footer) |
@@ -368,10 +368,15 @@ menempel ke lengkungan. Satu `Shape` dipakai untuk semua state, jadi morph
 collapsed → peek → expanded tidak mengganti siluet di tengah animasi.
 
 **Kartu notifikasi.** Notifikasi di collapsed memakai ukuran sendiri
-(384x100 dp) alih-alih memaksa teks ke bar 38 dp. Isinya nama aplikasi
-(9 sp, warna primary), judul (titleSmall, maks 2 baris), isi (bodySmall, maks
-2 baris), dan tombol tutup. Transisi masuk/keluar memakai crossfade 240 ms
-tanpa scale, supaya tidak ada komponen yang "meletup" hilang.
+(lebar mengikuti konten, maks 560 dp, tinggi 80 dp) alih-alih memaksa teks ke bar
+38 dp. Isinya ikon aplikasi asli
+(52 dp, fallback huruf awal), nama aplikasi, judul (titleMedium, maks 2 baris),
+isi (bodyMedium, maks 2 baris), dan tombol tutup. Kartu tetap muncul saat
+island hidden/dormant; hanya mode DND yang menahannya. Klik kartu memicu aksi
+"default" pengirim lewat D-Bus (atau membuka desktop entry-nya), sehingga
+aplikasi seperti ZapZap membuka percakapan yang sesuai. Transisi masuk/keluar
+memakai crossfade 240 ms tanpa scale, supaya tidak ada komponen yang "meletup"
+hilang.
 
 ### 5.2 Tiga level informasi
 
@@ -525,10 +530,12 @@ Row(gap 12dp)
 
 **Quick controls:**
 
-- Grid 3×2, tile tinggi 72–80 dp.
+- Grid 4×2, tile tinggi 72–80 dp.
 - Ikon 20 dp + label 11 sp + nilai (mis. 45%).
-- Slider volume/brightness di bawah grid, tinggi 40 dp.
-- Toggle Wi-Fi/Bluetooth memakai `ToggleButton` atau tile dengan state jelas.
+- Slider volume/brightness di atas grid, tinggi 40 dp.
+- Toggle Wi-Fi/Bluetooth memakai tile dengan state jelas.
+- Tekan lama tile membuka halaman setting desktop terkait (Wi-Fi, Bluetooth,
+  suara, notifikasi, tampilan); tile Settings membuka tab Settings milik island.
 
 **Settings:**
 

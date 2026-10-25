@@ -82,6 +82,12 @@ fun ExpandedContent(
             Spacer(Modifier.width(10.dp))
             SpeedReadout(speed = services.networkSpeed, fontSize = 10.sp)
             Spacer(Modifier.weight(1f))
+            BatteryIndicator(
+                percent = services.batteryState.percent,
+                charging = services.batteryState.charging,
+                iconSize = 16.dp,
+            )
+            Spacer(Modifier.width(6.dp))
             PowerMenu(services = services)
         }
 
@@ -107,7 +113,11 @@ fun ExpandedContent(
                 if (notification != null) {
                     NotificationBanner(
                         notification = notification,
-                        onDismiss = { services.notifications.dismiss() },
+                        onDismiss = { services.notifications.dismiss(notification.id) },
+                        onActivate = {
+                            notification.sourceId?.let { services.notificationServer.activate(it) }
+                            services.notifications.dismiss(notification.id)
+                        },
                     )
                 }
                 Box(modifier = Modifier.weight(1f)) {

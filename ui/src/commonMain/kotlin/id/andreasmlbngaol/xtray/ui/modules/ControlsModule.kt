@@ -1,6 +1,11 @@
 package id.andreasmlbngaol.xtray.ui.modules
 
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,12 +27,12 @@ import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.DoNotDisturbOn
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.MicOff
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material.icons.rounded.WifiOff
 import androidx.compose.material3.FilledTonalIconToggleButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconToggleButtonShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -43,12 +48,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import id.andreasmlbngaol.xtray.core.IslandModule
 import id.andreasmlbngaol.xtray.core.settings.ThemeMode
+import id.andreasmlbngaol.xtray.platform.system.SystemSettingsPage
 import id.andreasmlbngaol.xtray.ui.services.IslandServices
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -151,89 +158,139 @@ class ControlsModule(private val services: IslandServices) : IslandModule {
                 )
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                ToggleTile(
-                    label = "Mic",
-                    icon = if (state.micMuted == true) Icons.Rounded.MicOff else Icons.Rounded.Mic,
-                    checked = state.micMuted != true,
-                    modifier = Modifier.weight(1f),
-                    onCheckedChange = {
-                        services.controls.toggleMic()
-                        refreshAsync()
-                    },
-                )
+            val darkSurface = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+            val airplane = state.wifiEnabled == false && state.bluetoothEnabled == false
+            val tiles = buildList {
                 if (services.controls.hasWifi) {
-                    ToggleTile(
-                        label = "Wi-Fi",
-                        icon = if (state.wifiEnabled == true) Icons.Rounded.Wifi else Icons.Rounded.WifiOff,
-                        checked = state.wifiEnabled == true,
-                        modifier = Modifier.weight(1f),
-                        onCheckedChange = {
-                            services.controls.toggleWifi()
-                            refreshAsync()
-                        },
+                    add(
+                        ControlSpec(
+                            label = "Wi-Fi",
+                            icon = if (state.wifiEnabled == true) Icons.Rounded.Wifi else Icons.Rounded.WifiOff,
+                            checked = state.wifiEnabled == true,
+                            onCheckedChange = {
+                                services.controls.toggleWifi()
+                                refreshAsync()
+                            },
+                            onLongPress = { services.controls.openSettings(SystemSettingsPage.Wifi) },
+                        ),
                     )
                 }
                 if (services.controls.hasBluetooth) {
-                    ToggleTile(
-                        label = "Bluetooth",
-                        icon = if (state.bluetoothEnabled == true) Icons.Rounded.Bluetooth else Icons.Rounded.BluetoothDisabled,
-                        checked = state.bluetoothEnabled == true,
-                        modifier = Modifier.weight(1f),
-                        onCheckedChange = {
-                            services.controls.toggleBluetooth()
-                            refreshAsync()
-                        },
+                    add(
+                        ControlSpec(
+                            label = "Bluetooth",
+                            icon = if (state.bluetoothEnabled == true) Icons.Rounded.Bluetooth else Icons.Rounded.BluetoothDisabled,
+                            checked = state.bluetoothEnabled == true,
+                            onCheckedChange = {
+                                services.controls.toggleBluetooth()
+                                refreshAsync()
+                            },
+                            onLongPress = { services.controls.openSettings(SystemSettingsPage.Bluetooth) },
+                        ),
                     )
                 }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                ToggleTile(
-                    label = "DND",
-                    icon = Icons.Rounded.DoNotDisturbOn,
-                    checked = services.settings.current.doNotDisturb,
-                    modifier = Modifier.weight(1f),
-                    onCheckedChange = {
-                        services.settings.update { it.copy(doNotDisturb = !it.doNotDisturb) }
-                    },
-                )
-                val darkSurface = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-                ToggleTile(
-                    label = "Dark",
-                    icon = Icons.Rounded.DarkMode,
-                    checked = darkSurface,
-                    modifier = Modifier.weight(1f),
-                    onCheckedChange = { dark ->
-                        services.settings.update {
-                            it.copy(themeMode = if (dark) ThemeMode.Dark else ThemeMode.Light)
-                        }
-                    },
-                )
                 if (services.controls.hasWifi || services.controls.hasBluetooth) {
-                    val airplane = state.wifiEnabled == false && state.bluetoothEnabled == false
-                    ToggleTile(
-                        label = "Airplane",
-                        icon = Icons.Rounded.AirplanemodeActive,
-                        checked = airplane,
-                        modifier = Modifier.weight(1f),
-                        onCheckedChange = { enable ->
-                            if (enable) {
-                                if (state.wifiEnabled == true) services.controls.toggleWifi()
-                                if (state.bluetoothEnabled == true) services.controls.toggleBluetooth()
-                            } else {
-                                if (state.wifiEnabled == false) services.controls.toggleWifi()
-                                if (state.bluetoothEnabled == false) services.controls.toggleBluetooth()
-                            }
+                    add(
+                        ControlSpec(
+                            label = "Airplane",
+                            icon = Icons.Rounded.AirplanemodeActive,
+                            checked = airplane,
+                            onCheckedChange = { enable ->
+                                if (enable) {
+                                    if (state.wifiEnabled == true) services.controls.toggleWifi()
+                                    if (state.bluetoothEnabled == true) services.controls.toggleBluetooth()
+                                } else {
+                                    if (state.wifiEnabled == false) services.controls.toggleWifi()
+                                    if (state.bluetoothEnabled == false) services.controls.toggleBluetooth()
+                                }
+                                refreshAsync()
+                            },
+                            onLongPress = { services.controls.openSettings(SystemSettingsPage.Network) },
+                        ),
+                    )
+                }
+                add(
+                    ControlSpec(
+                        label = "Mic",
+                        icon = if (state.micMuted == true) Icons.Rounded.MicOff else Icons.Rounded.Mic,
+                        checked = state.micMuted != true,
+                        onCheckedChange = {
+                            services.controls.toggleMic()
                             refreshAsync()
                         },
-                    )
+                        onLongPress = { services.controls.openSettings(SystemSettingsPage.Sound) },
+                    ),
+                )
+                add(
+                    ControlSpec(
+                        label = "DND",
+                        icon = Icons.Rounded.DoNotDisturbOn,
+                        checked = services.settings.current.doNotDisturb,
+                        onCheckedChange = {
+                            services.settings.update { it.copy(doNotDisturb = !it.doNotDisturb) }
+                        },
+                        onLongPress = { services.controls.openSettings(SystemSettingsPage.Notifications) },
+                    ),
+                )
+                add(
+                    ControlSpec(
+                        label = "Dark",
+                        icon = Icons.Rounded.DarkMode,
+                        checked = darkSurface,
+                        onCheckedChange = { dark ->
+                            services.settings.update {
+                                it.copy(themeMode = if (dark) ThemeMode.Dark else ThemeMode.Light)
+                            }
+                        },
+                        onLongPress = { services.controls.openSettings(SystemSettingsPage.Appearance) },
+                    ),
+                )
+                add(
+                    ControlSpec(
+                        label = "Mute",
+                        icon = if (state.muted == true) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp,
+                        checked = state.muted == true,
+                        onCheckedChange = {
+                            services.controls.toggleMute()
+                            refreshAsync()
+                        },
+                        onLongPress = { services.controls.openSettings(SystemSettingsPage.Sound) },
+                    ),
+                )
+                add(
+                    ControlSpec(
+                        label = "Settings",
+                        icon = Icons.Rounded.Settings,
+                        checked = false,
+                        accent = true,
+                        onCheckedChange = { services.openModule("settings") },
+                    ),
+                )
+            }
+
+            // Quick settings are a 4x2 grid; long-pressing a tile opens the
+            // matching desktop settings page.
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                tiles.chunked(4).forEach { rowTiles ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        rowTiles.forEach { tile ->
+                            ControlTile(
+                                label = tile.label,
+                                icon = tile.icon,
+                                checked = tile.checked,
+                                accent = tile.accent,
+                                modifier = Modifier.weight(1f),
+                                onCheckedChange = tile.onCheckedChange,
+                                onLongPress = tile.onLongPress,
+                            )
+                        }
+                        repeat(4 - rowTiles.size) {
+                            Spacer(Modifier.weight(1f))
+                        }
+                    }
                 }
             }
 
@@ -339,32 +396,59 @@ private fun LevelCard(
     }
 }
 
+private class ControlSpec(
+    val label: String,
+    val icon: ImageVector,
+    val checked: Boolean,
+    val onCheckedChange: (Boolean) -> Unit,
+    val onLongPress: (() -> Unit)? = null,
+    val accent: Boolean = false,
+)
+
 @Composable
-private fun ToggleTile(
+private fun ControlTile(
     label: String,
     icon: ImageVector,
     checked: Boolean,
     modifier: Modifier = Modifier,
+    accent: Boolean = false,
     onCheckedChange: (Boolean) -> Unit,
+    onLongPress: (() -> Unit)? = null,
 ) {
+    val active = checked || accent
+    val shape = if (active) RoundedCornerShape(18.dp) else CircleShape
+    val container = when {
+        accent -> MaterialTheme.colorScheme.secondaryContainer
+        checked -> MaterialTheme.colorScheme.primaryContainer
+        else -> MaterialTheme.colorScheme.surfaceContainerHigh
+    }
+    val content = when {
+        accent -> MaterialTheme.colorScheme.onSecondaryContainer
+        checked -> MaterialTheme.colorScheme.onPrimaryContainer
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        FilledTonalIconToggleButton(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            shapes = IconToggleButtonShapes(
-                shape = CircleShape,
-                pressedShape = RoundedCornerShape(14.dp),
-                checkedShape = RoundedCornerShape(18.dp),
-            ),
-            modifier = Modifier.size(52.dp),
+        Box(
+            modifier = Modifier
+                .size(52.dp)
+                .clip(shape)
+                .background(container)
+                .combinedClickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = LocalIndication.current,
+                    onClick = { onCheckedChange(!checked) },
+                    onLongClick = onLongPress,
+                ),
+            contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = label,
                 modifier = Modifier.size(22.dp),
+                tint = content,
             )
         }
         Spacer(Modifier.height(4.dp))

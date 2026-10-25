@@ -66,8 +66,10 @@ click outside, or when you switch windows.
 The rail on the left has five tabs, and **Controls** is the one that opens by
 default:
 
-- **Controls** — volume, brightness, mic, Wi-Fi, Bluetooth, do not disturb,
-  dark mode, airplane mode, and the full music player right under the buttons.
+- **Controls** — volume, brightness, and a 4×2 quick-settings grid (mic,
+  Wi-Fi, Bluetooth, airplane, do not disturb, dark mode, mute, and Settings).
+  Hold a tile to open the matching desktop settings page; the full music player
+  sits right under the grid.
 - **Focus** — a focus timer with a duration you can type.
 - **Clipboard** — text history, click to copy again.
 - **Shelf** — the files you dragged onto the island.
@@ -80,8 +82,13 @@ close button.
 ## Notifications
 
 While X-Tray runs, it is the desktop notification receiver. When the bar is
-small, a notification appears as a 384x100 card with the app name, title, body,
-and a close button. In peek it shows on the bottom row. In expanded it becomes a
+small, a notification appears as a compact card that hugs its content (max 560 dp wide)
+with the sender's real app icon,
+app name, title, body, and a close button. The card still appears while the
+island is hidden or dormant; only **Do not disturb** suppresses it. Clicking the
+card asks the sender to open the matching content (for example the chat behind a
+ZapZap message) through its default D-Bus action, falling back to launching the
+app's desktop entry. In peek it shows on the bottom row; in expanded it becomes a
 banner above the active module.
 
 If you would rather keep the stock popups, turn off **Replace system
@@ -103,8 +110,8 @@ Pass `--version` to pin a release (the pipe form needs `bash -s --` to forward
 arguments):
 
 ```bash
-./scripts/install.sh --version v1.1.1
-curl -fsSL https://raw.githubusercontent.com/andreasmlbngaol/x-tray/master/scripts/install.sh | bash -s -- --version v1.1.1
+./scripts/install.sh --version v1.2.0
+curl -fsSL https://raw.githubusercontent.com/andreasmlbngaol/x-tray/master/scripts/install.sh | bash -s -- --version v1.2.0
 ```
 
 The script needs `curl`, `dpkg` and `apt-get` (Debian, Ubuntu, Zorin) and only
@@ -116,7 +123,7 @@ Prefer to do it by hand? Download the latest `.deb` from
 [Releases](https://github.com/andreasmlbngaol/x-tray/releases), then:
 
 ```bash
-sudo apt install ./x-tray_1.1.1_amd64.deb
+sudo apt install ./x-tray_1.2.0_amd64.deb
 ```
 
 Start **X-Tray** from your app menu. The package bundles its own Java runtime,

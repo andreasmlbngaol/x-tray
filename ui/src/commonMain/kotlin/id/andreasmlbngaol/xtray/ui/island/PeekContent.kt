@@ -16,10 +16,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AddCircle
-import androidx.compose.material.icons.rounded.BatteryChargingFull
-import androidx.compose.material.icons.rounded.BatteryFull
+import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.DoNotDisturbOn
-import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.SkipNext
@@ -46,7 +46,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import id.andreasmlbngaol.xtray.core.IslandModule
 import id.andreasmlbngaol.xtray.core.activity.LiveActivity
+import id.andreasmlbngaol.xtray.core.notification.IslandNotification
 import id.andreasmlbngaol.xtray.core.activity.LiveActivityController
 import id.andreasmlbngaol.xtray.platform.formatClockTime
 import id.andreasmlbngaol.xtray.platform.media.MediaTrack
@@ -65,6 +67,8 @@ fun PeekContent(
     services: IslandServices,
     modifier: Modifier = Modifier,
     dropActive: Boolean = false,
+    quickModules: List<IslandModule> = emptyList(),
+    onOpenModule: (String) -> Unit = {},
 ) {
     val clock = rememberClockText()
     val track = services.mediaTrack
@@ -145,41 +149,50 @@ fun PeekContent(
                     )
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = if (track != null && track.hasProgress) {
-                            formatMediaTime(track.positionMs) + " / " + formatMediaTime(track.lengthMs)
-                        } else {
-                            track?.album?.ifBlank { track.player }.orEmpty()
-                        },
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontSize = 9.sp,
-                            fontFeatureSettings = "tnum",
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
+                if (track == null) {
+                    PeekQuickActions(
+                        modules = quickModules,
+                        onOpenModule = onOpenModule,
                     )
-                    PeekTransport(
-                        playing = track?.playing == true,
-                        enabled = track != null,
-                        onPrevious = { command { services.media.previous() } },
-                        onPlayPause = { command { services.media.playPause() } },
-                        onNext = { command { services.media.next() } },
-                    )
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = if (track.hasProgress) {
+                                formatMediaTime(track.positionMs) + " / " + formatMediaTime(track.lengthMs)
+                            } else {
+                                track.album.ifBlank { track.player }
+                            },
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = 9.sp,
+                                fontFeatureSettings = "tnum",
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        PeekTransport(
+                            playing = track.playing,
+                            enabled = true,
+                            onPrevious = { command { services.media.previous() } },
+                            onPlayPause = { command { services.media.playPause() } },
+                            onNext = { command { services.media.next() } },
+                        )
+                    }
                 }
             }
 
             when {
                 notification != null -> PeekNotification(
-                    appName = notification.appName,
-                    title = notification.headline,
-                    body = notification.detail,
-                    onDismiss = { services.notifications.dismiss() },
+                    notification = notification,
+                    onDismiss = { services.notifications.dismiss(notification.id) },
+                    onActivate = {
+                        notification.sourceId?.let { services.notificationServer.activate(it) }
+                        services.notifications.dismiss(notification.id)
+                    },
                 )
                 activity != null -> Text(
                     text = "Focus is running • tap the island for details",
@@ -321,24 +334,63 @@ private fun MediaHeader(
             )
         }
         SpeedReadout(speed = speed, fontSize = 9.sp)
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(3.dp),
-        ) {
-            Icon(
-                imageVector = if (batteryCharging) Icons.Rounded.BatteryChargingFull else Icons.Rounded.BatteryFull,
-                contentDescription = "Battery",
-                modifier = Modifier.size(16.dp),
-                tint = if (batteryCharging) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = batteryPercent?.let { it.toString() + "%" } ?: "—",
-                style = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = "tnum"),
-                maxLines = 1,
-                softWrap = false,
-            )
+        BatteryIndicator(
+            percent = batteryPercent,
+            charging = batteryCharging,
+            iconSize = 16.dp,
+        )
+    }
+}
+
+/**
+ * Shown instead of the transport row when nothing is playing: the space is
+ * better spent on shortcuts into the modules a user reaches for in peek.
+ */
+@Composable
+private fun PeekQuickActions(
+    modules: List<IslandModule>,
+    onOpenModule: (String) -> Unit,
+) {
+    if (modules.isEmpty()) return
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        for (module in modules) {
+            Surface(
+                onClick = { onOpenModule(module.id) },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                ) {
+                    Icon(
+                        imageVector = moduleQuickIcon(module.id),
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                    )
+                    Text(
+                        text = module.title,
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
         }
     }
+}
+
+private fun moduleQuickIcon(id: String) = when (id) {
+    "clipboard" -> Icons.Rounded.ContentPaste
+    "shelf" -> Icons.Rounded.Folder
+    "focus" -> Icons.Rounded.Timer
+    else -> Icons.Rounded.Apps
 }
 
 @Composable
@@ -391,15 +443,13 @@ private fun PeekTransport(
 
 @Composable
 private fun PeekNotification(
-    appName: String,
-    title: String,
-    body: String,
+    notification: IslandNotification,
     onDismiss: () -> Unit,
+    onActivate: () -> Unit,
 ) {
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onDismiss),
+        onClick = onActivate,
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.primaryContainer,
         contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -409,21 +459,17 @@ private fun PeekNotification(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Icon(
-                imageVector = Icons.Rounded.Notifications,
-                contentDescription = null,
-                modifier = Modifier.size(13.dp),
-            )
+            NotificationAppIcon(notification = notification, size = 20.dp)
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = appName + " · " + title,
+                    text = notification.appName + " · " + notification.headline,
                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (body.isNotBlank()) {
+                if (notification.detail.isNotBlank()) {
                     Text(
-                        text = body,
+                        text = notification.detail,
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
                         maxLines = 1,
@@ -435,7 +481,9 @@ private fun PeekNotification(
                 text = "Dismiss",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = 4.dp),
+                modifier = Modifier
+                    .padding(start = 4.dp)
+                    .clickable(onClick = onDismiss),
             )
         }
     }

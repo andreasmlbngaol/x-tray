@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -46,6 +47,13 @@ import androidx.compose.ui.draganddrop.DragData
 import androidx.compose.ui.draganddrop.dragData
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import id.andreasmlbngaol.xtray.core.IslandConfig
@@ -53,6 +61,7 @@ import id.andreasmlbngaol.xtray.core.IslandState
 import id.andreasmlbngaol.xtray.core.IslandStateMachine
 import id.andreasmlbngaol.xtray.core.IslandStateRequest
 import id.andreasmlbngaol.xtray.core.geometry.IslandGeometry
+import id.andreasmlbngaol.xtray.core.notification.IslandNotification
 import id.andreasmlbngaol.xtray.platform.files.normalizeDroppedPath
 import id.andreasmlbngaol.xtray.ui.modules.ModuleCatalog
 import id.andreasmlbngaol.xtray.ui.services.IslandServices
@@ -91,6 +100,9 @@ fun XTray(
     onRequestHide: () -> Unit = {},
 ) {
     val settings = services.settings.current
+    val typography = MaterialTheme.typography
+    val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
     val config = remember(settings.hoverIntentMs, settings.collapseDelayMs) {
         IslandConfig.from(settings)
     }
@@ -131,6 +143,13 @@ fun XTray(
     fun publish() {
         state = machine.state
         onStateChange(machine.state)
+    }
+
+    services.openModule = { id ->
+        activeModuleId = id
+        machine.onActivate()
+        publish()
+        hoverEpoch++
     }
 
     LaunchedEffect(Unit) {
@@ -180,11 +199,18 @@ fun XTray(
         hoverEpoch++
     }
 
-    LaunchedEffect(isHovered) {
+    val notification = services.notifications.current
+    // Hover must not turn a visible notification card into peek: the card would
+    // shrink away just as the pointer reaches it. DND suppresses hover too.
+    LaunchedEffect(isHovered, notification?.id, settings.doNotDisturb) {
         val now = System.currentTimeMillis()
-        if (isHovered && !services.settings.current.doNotDisturb) {
+        val suppressHover = settings.doNotDisturb || notification != null
+        if (suppressHover) {
+            // Also cancels a hover that had already started counting down.
+            machine.onPointerExit(now)
+        } else if (isHovered) {
             machine.onPointerEnter(now)
-        } else if (!isHovered) {
+        } else {
             machine.onPointerExit(now)
         }
         publish()
@@ -220,11 +246,21 @@ fun XTray(
     val visualState = if (isDragOver && state == IslandState.Collapsed) IslandState.Peek else state
     // A notification grows the collapsed bar into a card, like peek, so the
     // sender, title and body all fit.
-    val notification = services.notifications.current
-    val showNotification = !dormantNow && state == IslandState.Collapsed && notification != null
+    // Notifications still surface while the island is tucked away or dormant;
+    // only do-not-disturb suppresses them.
+    val showNotification = state == IslandState.Collapsed &&
+        notification != null &&
+        !settings.doNotDisturb
+    val notificationSize = remember(notification, typography, density, textMeasurer) {
+        notification?.let { current ->
+            IslandDimens.notification(
+                measureNotificationWidth(current, textMeasurer, typography, density),
+            )
+        } ?: IslandDimens.Notification
+    }
     val target = when {
+        showNotification -> notificationSize
         dormantNow -> IslandDimens.Dormant
-        showNotification -> IslandDimens.Notification
         else -> IslandDimens.forState(visualState)
     }
     val motion = MaterialTheme.motionScheme
@@ -263,7 +299,6 @@ fun XTray(
     }
     val isDarkSurface = MaterialTheme.colorScheme.surface.luminance() < 0.5f
 
-    val density = LocalDensity.current
     LaunchedEffect(target) {
         val size = target
         val windowWidth = with(density) { IslandDimens.windowWidth(size).roundToPx() }
@@ -357,8 +392,8 @@ fun XTray(
                     },
             ) {
                 val contentKey = when {
-                    dormantNow -> "dormant"
                     showNotification -> "notification"
+                    dormantNow -> "dormant"
                     else -> visualState.name
                 }
                 if (reduceMotion) {
@@ -369,11 +404,18 @@ fun XTray(
                     ) { current ->
                         SizedContent(
                             key = current,
+                            notificationSize = notificationSize,
                             services = services,
                             modules = modules,
                             activeModule = activeModule,
                             dropActive = isDragOver,
                             onSelectModule = { activeModuleId = it },
+                            onOpenModule = { id ->
+                                activeModuleId = id
+                                machine.onActivate()
+                                publish()
+                                hoverEpoch++
+                            },
                         )
                     }
                 } else {
@@ -390,11 +432,18 @@ fun XTray(
                     ) { current ->
                         SizedContent(
                             key = current,
+                            notificationSize = notificationSize,
                             services = services,
                             modules = modules,
                             activeModule = activeModule,
                             dropActive = isDragOver,
                             onSelectModule = { activeModuleId = it },
+                            onOpenModule = { id ->
+                                activeModuleId = id
+                                machine.onActivate()
+                                publish()
+                                hoverEpoch++
+                            },
                         )
                     }
                 }
@@ -413,15 +462,17 @@ fun XTray(
 @Composable
 private fun SizedContent(
     key: String,
+    notificationSize: IslandSize,
     services: IslandServices,
     modules: List<id.andreasmlbngaol.xtray.core.IslandModule>,
     activeModule: id.andreasmlbngaol.xtray.core.IslandModule?,
     dropActive: Boolean,
     onSelectModule: (String) -> Unit,
+    onOpenModule: (String) -> Unit,
 ) {
     val size = when (key) {
         "dormant" -> IslandDimens.Dormant
-        "notification" -> IslandDimens.Notification
+        "notification" -> notificationSize
         "Collapsed" -> IslandDimens.Collapsed
         "Peek" -> IslandDimens.Peek
         else -> IslandDimens.Expanded
@@ -434,6 +485,7 @@ private fun SizedContent(
             activeModule = activeModule,
             dropActive = dropActive,
             onSelectModule = onSelectModule,
+            onOpenModule = onOpenModule,
         )
     }
 }
@@ -446,13 +498,18 @@ private fun IslandKeyContent(
     activeModule: id.andreasmlbngaol.xtray.core.IslandModule?,
     dropActive: Boolean,
     onSelectModule: (String) -> Unit,
+    onOpenModule: (String) -> Unit,
 ) {
     if (key == "notification") {
         val notification = services.notifications.current
         if (notification != null) {
             NotificationContent(
                 notification = notification,
-                onDismiss = { services.notifications.dismiss() },
+                onDismiss = { services.notifications.dismiss(notification.id) },
+                onActivate = {
+                    notification.sourceId?.let { services.notificationServer.activate(it) }
+                    services.notifications.dismiss(notification.id)
+                },
             )
         }
         return
@@ -481,6 +538,7 @@ private fun IslandKeyContent(
         activeModule = activeModule,
         dropActive = dropActive,
         onSelectModule = onSelectModule,
+        onOpenModule = onOpenModule,
     )
 }
 
@@ -492,10 +550,17 @@ private fun IslandStateContent(
     activeModule: id.andreasmlbngaol.xtray.core.IslandModule?,
     dropActive: Boolean,
     onSelectModule: (String) -> Unit,
+    onOpenModule: (String) -> Unit,
 ) {
     when (state) {
         IslandState.Collapsed -> CollapsedContent(services = services)
-        IslandState.Peek -> PeekContent(services = services, dropActive = dropActive)
+        IslandState.Peek -> PeekContent(
+            services = services,
+            dropActive = dropActive,
+            quickModules = listOf("clipboard", "shelf", "focus")
+                .mapNotNull { id -> modules.firstOrNull { it.id == id } },
+            onOpenModule = onOpenModule,
+        )
         IslandState.Expanded -> ExpandedContent(
             modules = modules,
             activeModule = activeModule,
@@ -503,4 +568,39 @@ private fun IslandStateContent(
             services = services,
         )
     }
+}
+
+/**
+ * Width of the collapsed notification card: the widest text line plus the
+ * icon, close button and paddings. Capped so a long message wraps instead of
+ * growing past [IslandDimens.NotificationMaxWidth].
+ */
+private fun measureNotificationWidth(
+    notification: IslandNotification,
+    measurer: TextMeasurer,
+    typography: Typography,
+    density: Density,
+): Dp {
+    val maxTextWidth = IslandDimens.NotificationMaxWidth - NotificationCardMetrics.FixedWidth
+    val constraints = Constraints(maxWidth = with(density) { maxTextWidth.roundToPx() })
+    fun textWidth(text: String, style: TextStyle): Int =
+        if (text.isBlank()) {
+            0
+        } else {
+            measurer.measure(
+                text = AnnotatedString(text),
+                style = style,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                constraints = constraints,
+            ).size.width
+        }
+
+    val contentWidth = maxOf(
+        textWidth(notification.appName, typography.labelSmall),
+        textWidth(notification.headline, typography.titleSmall),
+        textWidth(notification.detail, typography.bodySmall),
+    )
+    return (NotificationCardMetrics.FixedWidth + with(density) { contentWidth.toDp() })
+        .coerceIn(IslandDimens.NotificationMinWidth, IslandDimens.NotificationMaxWidth)
 }

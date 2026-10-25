@@ -1,8 +1,7 @@
 package id.andreasmlbngaol.xtray.ui.island
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,17 +9,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.ArrowUpward
-import androidx.compose.material.icons.rounded.BatteryChargingFull
-import androidx.compose.material.icons.rounded.BatteryFull
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DoNotDisturbOn
-import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -91,18 +87,10 @@ fun CollapsedContent(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Icon(
-                imageVector = if (battery.charging) Icons.Rounded.BatteryChargingFull else Icons.Rounded.BatteryFull,
-                contentDescription = "Battery",
-                modifier = Modifier.size(17.dp),
-                tint = if (battery.charging) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = battery.percent?.let { it.toString() + "%" } ?: "—",
-                style = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = "tnum"),
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                softWrap = false,
+            BatteryIndicator(
+                percent = battery.percent,
+                charging = battery.charging,
+                iconSize = 17.dp,
             )
         }
     }
@@ -117,28 +105,23 @@ fun CollapsedContent(
 fun NotificationContent(
     notification: IslandNotification,
     onDismiss: () -> Unit,
+    onActivate: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
         modifier = modifier
             .fillMaxSize()
-            .padding(start = 26.dp, end = 22.dp, top = 12.dp, bottom = 12.dp),
+            .clickable(onClick = onActivate)
+            .padding(
+                start = NotificationCardMetrics.StartPadding,
+                end = NotificationCardMetrics.EndPadding,
+                top = 12.dp,
+                bottom = 12.dp,
+            ),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(NotificationCardMetrics.Gap),
     ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .background(MaterialTheme.colorScheme.primary, CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Notifications,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onPrimary,
-            )
-        }
+        NotificationAppIcon(notification = notification, size = NotificationCardMetrics.IconSize)
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -154,7 +137,7 @@ fun NotificationContent(
                 text = notification.headline,
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 2,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             if (notification.detail.isNotBlank()) {
@@ -162,20 +145,23 @@ fun NotificationContent(
                     text = notification.detail,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
         }
-        IconButton(
+        FilledIconButton(
             onClick = onDismiss,
-            modifier = Modifier.size(28.dp),
+            modifier = Modifier.size(NotificationCardMetrics.CloseSize),
+            colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            ),
         ) {
             Icon(
                 imageVector = Icons.Rounded.Close,
                 contentDescription = "Dismiss",
                 modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
