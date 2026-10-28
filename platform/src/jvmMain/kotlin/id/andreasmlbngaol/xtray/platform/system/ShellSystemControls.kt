@@ -13,16 +13,28 @@ class ShellSystemControls : SystemControls {
     private val hasBrightnessctl = Shell.exists("brightnessctl")
     private val hasNmcli = Shell.exists("nmcli")
     private val hasBluetoothctl = Shell.exists("bluetoothctl")
+    private val hasBusctl = Shell.exists("busctl")
 
     /**
      * GNOME exposes screen brightness on the session bus, which covers
-     * machines without brightnessctl (and needs no extra privileges).
+     * machines without brightnessctl (and needs no extra privileges). The
+     * probe is retried while it fails: at login the power daemon can come up
+     * after X-Tray, and latching the first miss hid the slider all session.
      */
-    private val hasGnomePower = Shell.exists("busctl") && runCatching {
-        gnomeBrightness() != null
-    }.getOrDefault(false)
+    private var gnomePowerAvailable = false
+    private var gnomePowerCheckedAt = 0L
 
-    override val hasBrightness: Boolean get() = hasBrightnessctl || hasGnomePower
+    private fun gnomePower(): Boolean {
+        if (gnomePowerAvailable) return true
+        if (!hasBusctl) return false
+        val now = System.currentTimeMillis()
+        if (now - gnomePowerCheckedAt < 5_000L) return false
+        gnomePowerCheckedAt = now
+        gnomePowerAvailable = runCatching { gnomeBrightness() != null }.getOrDefault(false)
+        return gnomePowerAvailable
+    }
+
+    override val hasBrightness: Boolean get() = hasBrightnessctl || gnomePower()
     override val hasWifi: Boolean get() = hasNmcli
     override val hasBluetooth: Boolean get() = hasBluetoothctl
 
@@ -70,7 +82,7 @@ class ShellSystemControls : SystemControls {
             Shell.run("brightnessctl", "set", value.toString() + "%")
             return
         }
-        if (hasGnomePower) {
+        if (gnomePower()) {
             Shell.run(
                 "busctl", "--user", "set-property",
                 "org.gnome.SettingsDaemon.Power",
