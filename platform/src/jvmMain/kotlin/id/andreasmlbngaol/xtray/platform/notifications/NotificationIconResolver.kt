@@ -56,7 +56,10 @@ internal object NotificationIconResolver {
 
     /**
      * D-Bus image-data is (width, height, rowstride, has_alpha, bits_per_sample,
-     * channels, data) with ARGB32 bytes in network order.
+     * channels, data). The spec says ARGB32 in network order, but libnotify and
+     * the portal hand over GdkPixbuf pixels verbatim, which are RGBA. Treating
+     * those as ARGB turns red into alpha and leaves a purple avatar, so the
+     * byte order is detected from the data instead of assumed.
      */
     private fun imageData(hints: Map<String, Variant<*>>): ByteArray? {
         val raw = hints["image-data"]?.value
@@ -82,19 +85,20 @@ internal object NotificationIconResolver {
             else -> return null
         }
         if (width <= 0 || height <= 0 || width > 1024 || height > 1024) return null
-        if (bitsPerSample != 8 || channels != 4) return null
-        if (rowStride < width * 4 || data.size < rowStride.toLong() * height) return null
+        if (bitsPerSample != 8 || channels !in 3..4) return null
+        if (rowStride < width * channels || data.size < rowStride.toLong() * height) return null
 
+        val order = if (channels == 4) detectChannelOrder(data, width, height, rowStride) else ChannelOrder.Rgba
         val image = BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB)
         for (y in 0 until height) {
             var offset = y * rowStride
             for (x in 0 until width) {
-                val alpha = if (hasAlpha) data[offset].toInt() and 0xFF else 0xFF
-                val red = data[offset + 1].toInt() and 0xFF
-                val green = data[offset + 2].toInt() and 0xFF
-                val blue = data[offset + 3].toInt() and 0xFF
+                val alpha = if (channels == 4 && hasAlpha) data[offset + order.alpha].toInt() and 0xFF else 0xFF
+                val red = data[offset + order.red].toInt() and 0xFF
+                val green = data[offset + order.green].toInt() and 0xFF
+                val blue = data[offset + order.blue].toInt() and 0xFF
                 image.setRGB(x, y, (alpha shl 24) or (red shl 16) or (green shl 8) or blue)
-                offset += 4
+                offset += channels
             }
         }
         return runCatching {
@@ -103,6 +107,39 @@ internal object NotificationIconResolver {
                 output.toByteArray()
             }
         }.onFailure { Log.w("notifications: cannot encode icon", it) }.getOrNull()
+    }
+
+    private enum class ChannelOrder(val alpha: Int, val red: Int, val green: Int, val blue: Int) {
+        Argb(alpha = 0, red = 1, green = 2, blue = 3),
+        Rgba(alpha = 3, red = 0, green = 1, blue = 2),
+    }
+
+    /**
+     * Alpha is 255 for every opaque pixel, so it is the channel with the most
+     * 255s. When the count at index 3 is at least the count at index 0 the
+     * sender put alpha last (libnotify, the portal, most apps); otherwise it
+     * followed the spec and put it first.
+     */
+    private fun detectChannelOrder(
+        data: ByteArray,
+        width: Int,
+        height: Int,
+        rowStride: Int,
+    ): ChannelOrder {
+        val opaque = IntArray(4)
+        val stepX = maxOf(1, width / 48)
+        val stepY = maxOf(1, height / 48)
+        for (y in 0 until height step stepY) {
+            for (x in 0 until width step stepX) {
+                val base = y * rowStride + x * 4
+                for (channel in 0 until 4) {
+                    if ((data[base + channel].toInt() and 0xFF) == 255) {
+                        opaque[channel]++
+                    }
+                }
+            }
+        }
+        return if (opaque[3] >= opaque[0]) ChannelOrder.Rgba else ChannelOrder.Argb
     }
 
     private fun readImageFile(path: String): ByteArray? {
