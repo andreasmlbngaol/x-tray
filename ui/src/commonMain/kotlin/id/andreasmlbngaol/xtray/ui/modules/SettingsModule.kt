@@ -119,6 +119,30 @@ class SettingsModule(private val services: IslandServices) : IslandModule {
                     }
                 }
 
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Liquid Glass",
+                            style = MaterialTheme.typography.labelMedium,
+                        )
+                        Text(
+                            text = "Translucent material; follows Light or Dark",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = settings.glassEnabled,
+                        onCheckedChange = { enabled ->
+                            services.settings.update { it.copy(glassEnabled = enabled) }
+                        },
+                    )
+                }
+
                 Text(
                     text = "Accent",
                     style = MaterialTheme.typography.labelMedium,

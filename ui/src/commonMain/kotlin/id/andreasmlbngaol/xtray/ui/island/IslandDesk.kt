@@ -65,7 +65,9 @@ import id.andreasmlbngaol.xtray.core.notification.IslandNotification
 import id.andreasmlbngaol.xtray.platform.files.normalizeDroppedPath
 import id.andreasmlbngaol.xtray.ui.modules.ModuleCatalog
 import id.andreasmlbngaol.xtray.ui.services.IslandServices
+import id.andreasmlbngaol.xtray.ui.theme.LocalGlassEnabled
 import id.andreasmlbngaol.xtray.ui.theme.LocalReduceMotion
+import id.andreasmlbngaol.xtray.ui.theme.glassSurface
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -313,6 +315,8 @@ fun XTray(
         IslandShape(bottomRadius = bottomRadius, filletRadius = filletRadius)
     }
     val isDarkSurface = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    // The dormant hairline is too thin for a material; keep it solid.
+    val glass = LocalGlassEnabled.current && !dormantNow
 
     LaunchedEffect(target) {
         val size = target
@@ -352,13 +356,19 @@ fun XTray(
                         clip = false,
                     )
                     .clip(shape)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.98f),
-                                MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.99f),
+                    .then(
+                        if (glass) {
+                            Modifier.glassSurface(shape)
+                        } else {
+                            Modifier.background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.98f),
+                                        MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.99f),
+                                    )
+                                )
                             )
-                        )
+                        }
                     )
                     .border(
                         width = when {

@@ -465,6 +465,7 @@ private fun ApplicationScope.XTrayApplication() {
             accent = settings.current.accentColor,
             customAccent = settings.current.customAccent,
             reduceMotion = settings.current.reduceMotion,
+            glass = settings.current.glassEnabled,
         ) {
             XTray(
                 services = services,

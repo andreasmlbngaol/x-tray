@@ -11,6 +11,12 @@ import id.andreasmlbngaol.xtray.core.settings.AccentColor
 
 val LocalReduceMotion = staticCompositionLocalOf { false }
 
+/**
+ * Liquid Glass is a material, not an appearance: it still resolves to the
+ * light or dark palette, so the island keeps readable contrast either way.
+ */
+val LocalGlassEnabled = staticCompositionLocalOf { false }
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun XTrayTheme(
@@ -18,12 +24,16 @@ fun XTrayTheme(
     accent: AccentColor = AccentColor.Navy,
     customAccent: String = "",
     reduceMotion: Boolean = false,
+    glass: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val colorScheme = remember(accent, customAccent, darkTheme) {
         islandColorScheme(accent, darkTheme, customAccent)
     }
-    CompositionLocalProvider(LocalReduceMotion provides reduceMotion) {
+    CompositionLocalProvider(
+        LocalReduceMotion provides reduceMotion,
+        LocalGlassEnabled provides glass,
+    ) {
         MaterialExpressiveTheme(
             colorScheme = colorScheme,
             motionScheme = MotionScheme.expressive(),
