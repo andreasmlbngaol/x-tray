@@ -11,6 +11,8 @@ data class SystemState(
 
 /** Desktop settings pages a quick-control tile can deep-link to. */
 enum class SystemSettingsPage {
+    /** The settings app itself, without a specific panel. */
+    Root,
     Sound,
     Wifi,
     Bluetooth,

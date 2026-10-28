@@ -110,7 +110,19 @@ class ShellSystemControls : SystemControls {
      * up. Launchers return immediately, so openSettings does not block the UI.
      */
     override fun openSettings(page: SystemSettingsPage): Boolean {
+        if (page == SystemSettingsPage.Root) {
+            if (Shell.exists("gnome-control-center") && Shell.launch("gnome-control-center")) {
+                return true
+            }
+            if (Shell.exists("systemsettings") && Shell.launch("systemsettings")) {
+                return true
+            }
+            Log.w("no settings handler for root")
+            return false
+        }
+
         val gnome = when (page) {
+            SystemSettingsPage.Root -> ""
             SystemSettingsPage.Sound -> "sound"
             SystemSettingsPage.Wifi -> "wifi"
             SystemSettingsPage.Bluetooth -> "bluetooth"
@@ -121,6 +133,7 @@ class ShellSystemControls : SystemControls {
             SystemSettingsPage.Appearance -> "appearance"
         }
         val kde = when (page) {
+            SystemSettingsPage.Root -> ""
             SystemSettingsPage.Sound -> "kcm_pulseaudio"
             SystemSettingsPage.Wifi -> "kcm_networkmanagement"
             SystemSettingsPage.Bluetooth -> "kcm_bluetooth"

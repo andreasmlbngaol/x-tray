@@ -27,7 +27,7 @@ import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.DoNotDisturbOn
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.MicOff
-import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material.icons.rounded.WifiOff
@@ -260,10 +260,10 @@ class ControlsModule(private val services: IslandServices) : IslandModule {
                 add(
                     ControlSpec(
                         label = "Settings",
-                        icon = Icons.Rounded.Settings,
+                        icon = Icons.Rounded.Build,
                         checked = false,
                         accent = true,
-                        onCheckedChange = { services.openModule("settings") },
+                        onCheckedChange = { services.controls.openSettings(SystemSettingsPage.Root) },
                     ),
                 )
             }
