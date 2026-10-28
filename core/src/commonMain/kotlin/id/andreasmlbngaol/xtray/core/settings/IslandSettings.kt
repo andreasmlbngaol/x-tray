@@ -17,8 +17,6 @@ enum class AccentColor { Navy, Violet, Emerald, Amber, Rose }
 data class IslandSettings(
     val version: Int = 1,
     val themeMode: ThemeMode = ThemeMode.System,
-    /** Liquid Glass material; still resolves to the light or dark palette. */
-    val glassEnabled: Boolean = false,
     val accentColor: AccentColor = AccentColor.Navy,
     /** Optional #RRGGBB override; empty means the preset is used. */
     val customAccent: String = "",
