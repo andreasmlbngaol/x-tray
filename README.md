@@ -18,8 +18,9 @@
 X-Tray is a single panel that sits at the top centre of your screen. At rest it
 is only 300 px wide: the time, the date, network speed, and the battery. When
 your pointer gets close it grows to show what is playing and the latest
-notification, and when you click it, it opens fully with quick controls, the
-clipboard, a focus timer, the shelf, and settings.
+notification, and when you click it, it opens fully with quick controls, a
+calendar, the notification history, the clipboard, time tools, the shelf, and
+settings.
 
 No window to keep around, no extra taskbar icon. Everything you usually look
 for in five different places lives in one panel you can summon from the top
@@ -40,6 +41,8 @@ edge.
   and videos, open or delete them on hover, and drag them back out.
 - **Time tools.** A stopwatch, a countdown timer, and a focus session that
   counts down in peek and notifies you when it ends.
+- **Calendar and notification history.** A month grid you can jump through by
+  month or year, and every notification you received, grouped per app.
 - **Out of the way when you want.** Right click shrinks it to a 120x6 hairline
   at the top edge; hovering brings it back.
 
