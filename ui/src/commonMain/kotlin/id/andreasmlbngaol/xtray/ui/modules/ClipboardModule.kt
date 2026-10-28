@@ -23,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -101,7 +102,18 @@ class ClipboardModule(private val services: IslandServices) : IslandModule {
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
+                TextButton(
+                    onClick = {
+                        services.clipboardHistory.clear()
+                        services.bump()
+                    },
+                    enabled = items.isNotEmpty(),
+                ) {
+                    Text("Clear all", style = MaterialTheme.typography.labelMedium)
+                }
                 Text(
                     text = "Recording",
                     style = MaterialTheme.typography.labelSmall,

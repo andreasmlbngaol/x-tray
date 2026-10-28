@@ -9,6 +9,8 @@ import id.andreasmlbngaol.xtray.core.clipboard.ClipboardHistory
 import id.andreasmlbngaol.xtray.core.notification.NotificationCenter
 import id.andreasmlbngaol.xtray.core.settings.SettingsStore
 import id.andreasmlbngaol.xtray.core.shelf.ShelfStore
+import id.andreasmlbngaol.xtray.core.time.CountdownTimer
+import id.andreasmlbngaol.xtray.core.time.Stopwatch
 import id.andreasmlbngaol.xtray.platform.autostart.AutostartManager
 import id.andreasmlbngaol.xtray.platform.battery.BatterySource
 import id.andreasmlbngaol.xtray.platform.battery.BatteryState
@@ -43,6 +45,10 @@ class IslandServices(
     val power: PowerControls,
     val notificationServer: SystemNotificationServer,
 ) {
+    /** Stopwatch and countdown live here so they survive panel closes. */
+    val stopwatch = Stopwatch()
+    val timer = CountdownTimer()
+
     var batteryState: BatteryState by mutableStateOf(BatteryState())
     var mediaTrack: MediaTrack? by mutableStateOf(null)
     var systemState: SystemState by mutableStateOf(SystemState())

@@ -22,6 +22,7 @@ import androidx.compose.material.icons.rounded.DoNotDisturbOn
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.Timer
@@ -389,7 +390,7 @@ private fun PeekQuickActions(
 private fun moduleQuickIcon(id: String) = when (id) {
     "clipboard" -> Icons.Rounded.ContentPaste
     "shelf" -> Icons.Rounded.Folder
-    "focus" -> Icons.Rounded.Timer
+    "time" -> Icons.Rounded.Schedule
     else -> Icons.Rounded.Apps
 }
 

@@ -88,6 +88,26 @@ class IslandStateMachineTest {
     }
 
     @Test
+    fun dragOpensPeekImmediatelyAndHoldsIt() {
+        val machine = IslandStateMachine()
+        assertEquals(IslandState.Peek, machine.onDragOver())
+        assertEquals(IslandState.Peek, machine.onTick(10_000))
+
+        // The resize under the pointer is reported as an exit; the drag must
+        // keep peek open instead of collapsing and reopening.
+        machine.onPointerExit(10_100)
+        assertEquals(IslandState.Peek, machine.onDragOver())
+        assertFalse(machine.isTransitionPending(10_100))
+    }
+
+    @Test
+    fun dragWhileExpandedKeepsExpanded() {
+        val machine = IslandStateMachine()
+        machine.onActivate()
+        assertEquals(IslandState.Expanded, machine.onDragOver())
+    }
+
+    @Test
     fun transitionPendingReflectsTimers() {
         val machine = IslandStateMachine()
         assertFalse(machine.isTransitionPending(0))

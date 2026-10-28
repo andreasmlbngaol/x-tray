@@ -13,6 +13,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 interface IslandModule {
     val id: String
     val title: String
+
+    /** Rail label for titles that do not fit the narrow rail. */
+    val shortTitle: String get() = title
+
     val icon: ImageVector
 
     /** Higher priority modules win the collapsed/peek slot. */

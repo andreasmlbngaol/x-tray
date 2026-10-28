@@ -38,8 +38,8 @@ edge.
   click one to copy it again.
 - **A shelf for files.** Drag files onto the island, see thumbnails for images
   and videos, open or delete them on hover, and drag them back out.
-- **Focus timer.** Type any duration, watch it count down in peek, get a
-  notification when the session ends.
+- **Time tools.** A stopwatch, a countdown timer, and a focus session that
+  counts down in peek and notifies you when it ends.
 - **Out of the way when you want.** Right click shrinks it to a 120x6 hairline
   at the top edge; hovering brings it back.
 
@@ -63,16 +63,23 @@ click outside, or when you switch windows.
 
 <img src="docs/images/expanded.png" alt="X-Tray expanded on the Controls tab" width="420">
 
-The rail on the left has five tabs, and **Controls** is the one that opens by
+The rail on the left has seven tabs, and **Controls** is the one that opens by
 default:
 
 - **Controls** — volume, brightness, and a 4×2 quick-settings grid (mic,
   Wi-Fi, Bluetooth, airplane, do not disturb, dark mode, mute, and Settings).
   Hold a tile to open the matching desktop settings page; the full music player
   sits right under the grid.
-- **Focus** — a focus timer with a duration you can type.
-- **Clipboard** — text history, click to copy again.
-- **Shelf** — the files you dragged onto the island.
+- **Calendar** — a month grid with today marked. Pick the month and the year
+  from their own menus, or step a month at a time. Clicking the date in the
+  header opens the same tab.
+- **Notifications** — the history of everything the island received, grouped
+  per app. Expand a group to read all of its messages, swipe a message away,
+  swipe the group header to drop the sender, or clear the lot.
+- **Clipboard** — text history, click to copy again, clear all at once.
+- **Time** — a stopwatch, a countdown timer, and a focus session with a
+  duration you can type. All three keep running when the panel closes.
+- **Shelf** — the files you dragged onto the island, with clear all.
 - **Settings** — theme, accent colour, reduce motion, autostart, hover timing,
   notification takeover, and reset.
 
@@ -90,6 +97,11 @@ card asks the sender to open the matching content (for example the chat behind a
 ZapZap message) through its default D-Bus action, falling back to launching the
 app's desktop entry. In peek it shows on the bottom row; in expanded it becomes a
 banner above the active module.
+
+Every message is also kept in the **Notifications** tab, grouped per app, so a
+sender that posts often cannot flood the list. A horizontal swipe removes one
+message, swiping the group header removes every message from that sender, and
+**Clear all** empties the history. Clicking a message opens the app that sent it.
 
 If you would rather keep the stock popups, turn off **Replace system
 notifications** in Settings. When X-Tray exits, the desktop gets notifications
@@ -110,8 +122,8 @@ Pass `--version` to pin a release (the pipe form needs `bash -s --` to forward
 arguments):
 
 ```bash
-./scripts/install.sh --version v1.2.0
-curl -fsSL https://raw.githubusercontent.com/andreasmlbngaol/x-tray/master/scripts/install.sh | bash -s -- --version v1.2.0
+./scripts/install.sh --version v1.3.0
+curl -fsSL https://raw.githubusercontent.com/andreasmlbngaol/x-tray/master/scripts/install.sh | bash -s -- --version v1.3.0
 ```
 
 The script needs `curl`, `dpkg` and `apt-get` (Debian, Ubuntu, Zorin) and only
@@ -123,7 +135,7 @@ Prefer to do it by hand? Download the latest `.deb` from
 [Releases](https://github.com/andreasmlbngaol/x-tray/releases), then:
 
 ```bash
-sudo apt install ./x-tray_1.2.0_amd64.deb
+sudo apt install ./x-tray_1.3.0_amd64.deb
 ```
 
 Start **X-Tray** from your app menu. The package bundles its own Java runtime,

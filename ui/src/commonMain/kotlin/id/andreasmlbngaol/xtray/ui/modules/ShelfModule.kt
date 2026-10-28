@@ -35,6 +35,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -67,6 +68,7 @@ class ShelfModule(private val services: IslandServices) : IslandModule {
 
     @Composable
     override fun PeekContent() {
+        val revision = services.revision
         val items = services.shelf.items()
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -92,6 +94,7 @@ class ShelfModule(private val services: IslandServices) : IslandModule {
 
     @Composable
     override fun ExpandedContent() {
+        val revision = services.revision
         val items = services.shelf.items()
         // Hover lives here, not inside the lazy item: a tile that is
         // recomposed (clock tick, new thumbnail) would otherwise lose its
@@ -137,7 +140,14 @@ class ShelfModule(private val services: IslandServices) : IslandModule {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f),
                     )
-
+                    TextButton(
+                        onClick = {
+                            services.shelf.clear()
+                            services.bump()
+                        },
+                    ) {
+                        Text("Clear all", style = MaterialTheme.typography.labelMedium)
+                    }
                 }
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(minSize = 104.dp),

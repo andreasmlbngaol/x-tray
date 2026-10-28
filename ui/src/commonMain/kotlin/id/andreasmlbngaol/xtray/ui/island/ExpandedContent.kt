@@ -73,13 +73,21 @@ fun ExpandedContent(
                 text = clock.time + ":" + clock.seconds,
                 style = MaterialTheme.typography.titleMediumEmphasized.copy(fontFeatureSettings = "tnum"),
             )
+            Spacer(Modifier.width(6.dp))
+            // The date is the second way into the calendar, next to its rail tab.
+            Surface(
+                onClick = { services.openModule("calendar") },
+                shape = RoundedCornerShape(8.dp),
+                color = Color.Transparent,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ) {
+                Text(
+                    text = clock.date,
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                )
+            }
             Spacer(Modifier.width(8.dp))
-            Text(
-                text = clock.date,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.width(10.dp))
             SpeedReadout(speed = services.networkSpeed, fontSize = 10.sp)
             Spacer(Modifier.weight(1f))
             BatteryIndicator(
@@ -290,7 +298,7 @@ private fun ModuleRail(
                     )
                     Spacer(Modifier.height(3.dp))
                     Text(
-                        text = module.title,
+                        text = module.shortTitle,
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontSize = 9.sp,
                             lineHeight = 10.sp,

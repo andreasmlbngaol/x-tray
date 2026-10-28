@@ -22,5 +22,8 @@ actual fun currentClockText(): ClockText {
         hours = now.format(DateTimeFormatter.ofPattern("HH")),
         minutes = now.format(DateTimeFormatter.ofPattern("mm")),
         seconds = now.format(DateTimeFormatter.ofPattern("ss")),
+        year = now.year,
+        month = now.monthValue,
+        dayOfMonth = now.dayOfMonth,
     )
 }

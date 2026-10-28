@@ -5,6 +5,7 @@ package id.andreasmlbngaol.xtray.core
  *
  * Behaviour:
  * - Hovering the collapsed island opens the peek after [IslandConfig.hoverIntentMs].
+ * - A file drag opens peek immediately and holds it until the drag ends.
  * - Peek never opens by itself; a click is required to expand.
  * - Leaving peek collapses it after [IslandConfig.collapseDelayMs].
  * - Expanded ignores pointer movement; it closes on explicit dismiss (Esc,
@@ -43,6 +44,20 @@ class IslandStateMachine(
         if (state == IslandState.Peek) {
             exitStartedAt = nowMs
         }
+        return state
+    }
+
+    /**
+     * A file drag hovers the island. Dragging already proves intent, so peek
+     * opens without the hover delay and is held even while the island resizes
+     * under the pointer, which the window system reports as an exit.
+     */
+    fun onDragOver(): IslandState {
+        suppressedUntilExit = false
+        pointerInside = true
+        hoverStartedAt = null
+        exitStartedAt = null
+        if (state == IslandState.Collapsed) state = IslandState.Peek
         return state
     }
 

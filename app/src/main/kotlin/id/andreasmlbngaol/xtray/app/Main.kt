@@ -44,6 +44,7 @@ import id.andreasmlbngaol.xtray.platform.ipc.sendIpc
 import id.andreasmlbngaol.xtray.platform.media.BusctlMediaSource
 import id.andreasmlbngaol.xtray.platform.network.SysfsNetworkSpeedSource
 import id.andreasmlbngaol.xtray.platform.notifications.DbusNotificationServer
+import id.andreasmlbngaol.xtray.platform.notifications.NotificationSound
 import id.andreasmlbngaol.xtray.platform.settings.SettingsFile
 import id.andreasmlbngaol.xtray.platform.system.ShellPowerControls
 import id.andreasmlbngaol.xtray.platform.system.ShellSystemControls
@@ -278,6 +279,32 @@ private fun ApplicationScope.XTrayApplication() {
         }
     }
 
+    // The countdown and the focus session outlive the panel, so their
+    // completion notifications belong to the app, not to the tab that started
+    // them: closing the island must not swallow the alert.
+    LaunchedEffect(Unit) {
+        while (true) {
+            if (services.timer.tick() && !services.settings.current.doNotDisturb) {
+                services.notifications.push("Time", "Timer finished", "Your timer has finished.")
+            }
+            delay(500L)
+        }
+    }
+
+    val activity = services.activity.current
+    LaunchedEffect(activity?.id) {
+        if (activity == null) return@LaunchedEffect
+        while (true) {
+            if (services.activity.isFinished()) {
+                if (!services.settings.current.doNotDisturb) {
+                    services.notifications.push("Focus", "Session complete", activity.title + " has finished.")
+                }
+                break
+            }
+            delay(500L)
+        }
+    }
+
     // The island can host org.freedesktop.Notifications itself. GNOME keeps
     // that name on a small helper process which does not allow replacement, so
     // taking over means stopping it; stop() pings the helper's own bus name to
@@ -367,8 +394,14 @@ private fun ApplicationScope.XTrayApplication() {
         DisposableEffect(window) {
             val listener = object : MouseAdapter() {
                 override fun mouseEntered(event: MouseEvent) {
-                    Log.d("awt enter " + event.x + "," + event.y + " bounds=" + islandBounds)
-                    islandHovered = true
+                    // The expanded window spans the monitor, so entering the
+                    // window no longer means entering the island itself.
+                    val inside = islandBounds.contains(event.xOnScreen, event.yOnScreen)
+                    Log.d(
+                        "awt enter " + event.x + "," + event.y + " inside=" + inside +
+                            " bounds=" + islandBounds
+                    )
+                    islandHovered = inside
                 }
 
                 override fun mouseExited(event: MouseEvent) {
@@ -408,6 +441,13 @@ private fun ApplicationScope.XTrayApplication() {
         }
 
         fun placeWindow() {
+            val monitor = DisplayInfo.usableBounds(settings.current.monitorIndex)
+            if (islandState == IslandState.Expanded) {
+                // Expanded covers the monitor, so there is nothing to centre.
+                window.setSize(monitor.width, monitor.height)
+                window.setLocation(monitor.x, monitor.y)
+                return
+            }
             val position = DisplayInfo.topCenterPosition(
                 width = window.width,
                 height = window.height,
@@ -459,27 +499,47 @@ private fun ApplicationScope.XTrayApplication() {
                     Log.i("island hidden by right click")
                 },
                 onGeometryChanged = { geometry ->
-                    window.setSize(geometry.windowWidthPx, geometry.windowHeightPx)
-                    val position = DisplayInfo.topCenterPosition(
-                        width = geometry.windowWidthPx,
-                        height = geometry.windowHeightPx,
-                        topMargin = 0,
-                        monitorIndex = settings.current.monitorIndex,
-                    )
-                    window.setLocation(position.x, position.y)
+                    val monitor = DisplayInfo.usableBounds(settings.current.monitorIndex)
+                    val windowWidth = if (geometry.captureOutside) monitor.width else geometry.windowWidthPx
+                    val windowHeight = if (geometry.captureOutside) monitor.height else geometry.windowHeightPx
+                    window.setSize(windowWidth, windowHeight)
+
+                    val originX: Int
+                    val originY: Int
+                    if (geometry.captureOutside) {
+                        originX = monitor.x
+                        originY = monitor.y
+                    } else {
+                        val position = DisplayInfo.topCenterPosition(
+                            width = windowWidth,
+                            height = windowHeight,
+                            topMargin = 0,
+                            monitorIndex = settings.current.monitorIndex,
+                        )
+                        originX = position.x
+                        originY = position.y
+                    }
+                    window.setLocation(originX, originY)
+
+                    // The island stays top-centre; when expanded the window is
+                    // the monitor, so the extra width becomes the backdrop.
                     islandBounds = Rectangle(
-                        position.x + geometry.paddingPx,
-                        position.y,
+                        originX + (windowWidth - geometry.islandWidthPx) / 2,
+                        originY,
                         geometry.islandWidthPx,
                         geometry.islandHeightPx,
                     )
                     Log.d(
-                        "geometry window=" + geometry.windowWidthPx + "x" + geometry.windowHeightPx +
+                        "geometry window=" + windowWidth + "x" + windowHeight +
                             " island=" + geometry.islandWidthPx + "x" + geometry.islandHeightPx +
-                            " at " + position.x + "," + position.y
+                            " at " + originX + "," + originY + " capture=" + geometry.captureOutside
                     )
                     SwingUtilities.invokeLater {
-                        if (!X11Window.applyInputRegion(geometry)) {
+                        val inputGeometry = geometry.copy(
+                            windowWidthPx = windowWidth,
+                            windowHeightPx = windowHeight,
+                        )
+                        if (!X11Window.applyInputRegion(inputGeometry)) {
                             Log.d("input region not applied")
                         }
                     }
@@ -489,22 +549,25 @@ private fun ApplicationScope.XTrayApplication() {
     }
 }
 
-private fun createServices(settings: SettingsStore): IslandServices = IslandServices(
-    settings = settings,
-    media = BusctlMediaSource(),
-    clipboard = AwtClipboardWatcher(),
-    clipboardHistory = ClipboardHistory(maxItems = 50),
-    shelf = ShelfStore(),
-    battery = SysfsBatterySource(),
-    controls = ShellSystemControls(),
-    activity = LiveActivityController { System.currentTimeMillis() },
-    notifications = NotificationCenter(),
-    autostart = XdgAutostartManager(),
-    fileOpener = DesktopFileOpener(),
-    network = SysfsNetworkSpeedSource(),
-    power = ShellPowerControls(),
-    notificationServer = DbusNotificationServer(),
-)
+private fun createServices(settings: SettingsStore): IslandServices {
+    val sound = NotificationSound()
+    return IslandServices(
+        settings = settings,
+        media = BusctlMediaSource(),
+        clipboard = AwtClipboardWatcher(),
+        clipboardHistory = ClipboardHistory(maxItems = 50),
+        shelf = ShelfStore(),
+        battery = SysfsBatterySource(),
+        controls = ShellSystemControls(),
+        activity = LiveActivityController { System.currentTimeMillis() },
+        notifications = NotificationCenter(onPush = { sound.play() }),
+        autostart = XdgAutostartManager(),
+        fileOpener = DesktopFileOpener(),
+        network = SysfsNetworkSpeedSource(),
+        power = ShellPowerControls(),
+        notificationServer = DbusNotificationServer(),
+    )
+}
 
 private fun handleCommand(
     command: IpcCommand,

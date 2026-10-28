@@ -139,6 +139,8 @@ fun XTray(
     val interactionSource = remember { MutableInteractionSource() }
     val isHovered = hovered
     var isDragOver by remember { mutableStateOf(false) }
+    // Counts exits so a re-enter can cancel the pending clear below.
+    var dragExitTick by remember { mutableIntStateOf(0) }
 
     fun publish() {
         state = machine.state
@@ -156,18 +158,26 @@ fun XTray(
         onStateChange(state)
     }
 
+    // Entering a drag grows the island so the drop zone is reachable, and the
+    // window resize is reported back as an exit. Clearing the latch right away
+    // made the island shrink and grow again in a loop, so an exit only clears
+    // it after a short grace; a re-enter during the resize cancels that.
     val dropTarget = remember(services) {
         object : DragAndDropTarget {
             override fun onEntered(event: DragAndDropEvent) {
-                if (event.dragData() is DragData.FilesList) isDragOver = true
+                if (event.dragData() is DragData.FilesList) {
+                    dragExitTick = 0
+                    isDragOver = true
+                }
             }
 
             override fun onExited(event: DragAndDropEvent) {
-                isDragOver = false
+                dragExitTick++
             }
 
             override fun onEnded(event: DragAndDropEvent) {
                 isDragOver = false
+                dragExitTick++
             }
 
             override fun onDrop(event: DragAndDropEvent): Boolean {
@@ -188,6 +198,12 @@ fun XTray(
         }
     }
 
+    LaunchedEffect(dragExitTick) {
+        if (dragExitTick == 0) return@LaunchedEffect
+        delay(400L)
+        if (isDragOver) isDragOver = false
+    }
+
     LaunchedEffect(stateRequest?.id) {
         val request = stateRequest ?: return@LaunchedEffect
         when (request.target) {
@@ -202,16 +218,15 @@ fun XTray(
     val notification = services.notifications.current
     // Hover must not turn a visible notification card into peek: the card would
     // shrink away just as the pointer reaches it. DND suppresses hover too.
-    LaunchedEffect(isHovered, notification?.id, settings.doNotDisturb) {
+    // A file drag wins over both: it is a deliberate gesture and must keep the
+    // drop zone open even while the window resize confuses the hover poll.
+    LaunchedEffect(isHovered, notification?.id, settings.doNotDisturb, isDragOver) {
         val now = System.currentTimeMillis()
-        val suppressHover = settings.doNotDisturb || notification != null
-        if (suppressHover) {
-            // Also cancels a hover that had already started counting down.
-            machine.onPointerExit(now)
-        } else if (isHovered) {
-            machine.onPointerEnter(now)
-        } else {
-            machine.onPointerExit(now)
+        when {
+            isDragOver -> machine.onDragOver()
+            settings.doNotDisturb || notification != null -> machine.onPointerExit(now)
+            isHovered -> machine.onPointerEnter(now)
+            else -> machine.onPointerExit(now)
         }
         publish()
         hoverEpoch++
@@ -299,7 +314,7 @@ fun XTray(
     }
     val isDarkSurface = MaterialTheme.colorScheme.surface.luminance() < 0.5f
 
-    LaunchedEffect(target) {
+    LaunchedEffect(target, state) {
         val size = target
         val windowWidth = with(density) { IslandDimens.windowWidth(size).roundToPx() }
         val windowHeight = with(density) { IslandDimens.windowHeight(size).roundToPx() }
@@ -311,6 +326,9 @@ fun XTray(
                 islandHeightPx = with(density) { size.height.roundToPx() },
                 bottomRadiusPx = with(density) { size.bottomRadius.toPx() },
                 paddingPx = with(density) { IslandDimens.WindowHorizontalPadding.roundToPx() },
+                // Expanded is modal: the window grows to the monitor so the
+                // click that closes it cannot land on the app behind.
+                captureOutside = state == IslandState.Expanded,
             )
         )
     }
@@ -323,6 +341,22 @@ fun XTray(
             modifier = modifier.fillMaxSize(),
             contentAlignment = Alignment.TopCenter,
         ) {
+            if (state == IslandState.Expanded) {
+                // Swallows the click that dismisses the panel. Without this the
+                // click would fall through to whatever window is underneath.
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) {
+                            machine.onDismiss()
+                            publish()
+                            hoverEpoch++
+                        },
+                )
+            }
             Box(
                 modifier = Modifier
                     .width(width)
@@ -557,7 +591,7 @@ private fun IslandStateContent(
         IslandState.Peek -> PeekContent(
             services = services,
             dropActive = dropActive,
-            quickModules = listOf("clipboard", "shelf", "focus")
+            quickModules = listOf("clipboard", "shelf", "time")
                 .mapNotNull { id -> modules.firstOrNull { it.id == id } },
             onOpenModule = onOpenModule,
         )

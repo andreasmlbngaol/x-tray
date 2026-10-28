@@ -6,6 +6,9 @@ data class ClockText(
     val hours: String,
     val minutes: String,
     val seconds: String,
+    val year: Int,
+    val month: Int,
+    val dayOfMonth: Int,
 )
 
 expect fun currentClockText(): ClockText

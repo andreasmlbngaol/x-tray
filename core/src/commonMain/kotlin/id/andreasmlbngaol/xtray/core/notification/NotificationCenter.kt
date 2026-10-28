@@ -27,9 +27,29 @@ data class IslandNotification(
     val detail: String get() = if (title.isBlank()) "" else body
 }
 
-/** Transient in-island messages pushed by IPC or by the notification daemon. */
-class NotificationCenter(private val clock: () -> Long = { System.currentTimeMillis() }) {
+/** Every notification from one application, newest first. */
+data class NotificationGroup(
+    val appName: String,
+    val notifications: List<IslandNotification>,
+) {
+    val latest: IslandNotification get() = notifications.first()
+}
+
+/**
+ * Transient in-island messages pushed by IPC or by the notification daemon,
+ * plus the history the Notifications tab groups by sender.
+ */
+class NotificationCenter(
+    private val clock: () -> Long = { System.currentTimeMillis() },
+    private val maxHistory: Int = 100,
+    /** Called for every accepted message; the app layer uses it for the chime. */
+    private val onPush: (IslandNotification) -> Unit = {},
+) {
     var current: IslandNotification? by mutableStateOf(null)
+        private set
+
+    /** Everything received this session, newest first. Dismissing the card keeps it. */
+    var history: List<IslandNotification> by mutableStateOf(emptyList())
         private set
 
     private var nextId = 1L
@@ -51,6 +71,8 @@ class NotificationCenter(private val clock: () -> Long = { System.currentTimeMil
             sourceId = sourceId,
         )
         current = notification
+        history = (listOf(notification) + history).take(maxHistory.coerceAtLeast(1))
+        onPush(notification)
         return notification
     }
 
@@ -67,4 +89,29 @@ class NotificationCenter(private val clock: () -> Long = { System.currentTimeMil
             current = null
         }
     }
+
+    /** Drops a single message; the on-screen card goes too when it is that one. */
+    fun remove(id: Long) {
+        history = history.filterNot { it.id == id }
+        if (current?.id == id) current = null
+    }
+
+    /** Drops every message from [appName]; the card goes too when it is one of them. */
+    fun removeGroup(appName: String) {
+        history = history.filterNot { it.appName == appName }
+        if (current?.appName == appName) current = null
+    }
+
+    /** Drops the whole history and the card that is on screen. */
+    fun clearAll() {
+        current = null
+        history = emptyList()
+    }
+
+    /** History bucketed per sender, most recently active sender first. */
+    fun grouped(): List<NotificationGroup> =
+        history
+            .groupBy { it.appName }
+            .map { (appName, items) -> NotificationGroup(appName, items) }
+            .sortedByDescending { it.latest.createdAtMs }
 }

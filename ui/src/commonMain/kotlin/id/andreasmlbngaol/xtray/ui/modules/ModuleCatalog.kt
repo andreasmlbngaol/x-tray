@@ -11,8 +11,10 @@ object ModuleCatalog {
      */
     fun create(services: IslandServices): List<IslandModule> = listOf(
         ControlsModule(services),
-        FocusModule(services),
+        CalendarModule(),
+        NotificationsModule(services),
         ClipboardModule(services),
+        TimeModule(services),
         ShelfModule(services),
         SettingsModule(services),
     )
