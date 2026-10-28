@@ -131,7 +131,7 @@ arguments):
 
 ```bash
 ./scripts/install.sh --version v1.3.0
-curl -fsSL https://raw.githubusercontent.com/andreasmlbngaol/x-tray/master/scripts/install.sh | bash -s -- --version v1.3.2
+curl -fsSL https://raw.githubusercontent.com/andreasmlbngaol/x-tray/master/scripts/install.sh | bash -s -- --version v1.3.3
 ```
 
 The script needs `curl`, `dpkg` and `apt-get` (Debian, Ubuntu, Zorin) and only
@@ -143,7 +143,7 @@ Prefer to do it by hand? Download the latest `.deb` from
 [Releases](https://github.com/andreasmlbngaol/x-tray/releases), then:
 
 ```bash
-sudo apt install ./x-tray_1.3.2_amd64.deb
+sudo apt install ./x-tray_1.3.3_amd64.deb
 ```
 
 Start **X-Tray** from your app menu. The package bundles its own Java runtime,
