@@ -314,7 +314,7 @@ fun XTray(
     }
     val isDarkSurface = MaterialTheme.colorScheme.surface.luminance() < 0.5f
 
-    LaunchedEffect(target, state) {
+    LaunchedEffect(target) {
         val size = target
         val windowWidth = with(density) { IslandDimens.windowWidth(size).roundToPx() }
         val windowHeight = with(density) { IslandDimens.windowHeight(size).roundToPx() }
@@ -326,9 +326,6 @@ fun XTray(
                 islandHeightPx = with(density) { size.height.roundToPx() },
                 bottomRadiusPx = with(density) { size.bottomRadius.toPx() },
                 paddingPx = with(density) { IslandDimens.WindowHorizontalPadding.roundToPx() },
-                // Expanded is modal: the window grows to the monitor so the
-                // click that closes it cannot land on the app behind.
-                captureOutside = state == IslandState.Expanded,
             )
         )
     }
@@ -341,22 +338,6 @@ fun XTray(
             modifier = modifier.fillMaxSize(),
             contentAlignment = Alignment.TopCenter,
         ) {
-            if (state == IslandState.Expanded) {
-                // Swallows the click that dismisses the panel. Without this the
-                // click would fall through to whatever window is underneath.
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                        ) {
-                            machine.onDismiss()
-                            publish()
-                            hoverEpoch++
-                        },
-                )
-            }
             Box(
                 modifier = Modifier
                     .width(width)

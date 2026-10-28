@@ -394,14 +394,8 @@ private fun ApplicationScope.XTrayApplication() {
         DisposableEffect(window) {
             val listener = object : MouseAdapter() {
                 override fun mouseEntered(event: MouseEvent) {
-                    // The expanded window spans the monitor, so entering the
-                    // window no longer means entering the island itself.
-                    val inside = islandBounds.contains(event.xOnScreen, event.yOnScreen)
-                    Log.d(
-                        "awt enter " + event.x + "," + event.y + " inside=" + inside +
-                            " bounds=" + islandBounds
-                    )
-                    islandHovered = inside
+                    Log.d("awt enter " + event.x + "," + event.y + " bounds=" + islandBounds)
+                    islandHovered = true
                 }
 
                 override fun mouseExited(event: MouseEvent) {
@@ -441,13 +435,6 @@ private fun ApplicationScope.XTrayApplication() {
         }
 
         fun placeWindow() {
-            val monitor = DisplayInfo.usableBounds(settings.current.monitorIndex)
-            if (islandState == IslandState.Expanded) {
-                // Expanded covers the monitor, so there is nothing to centre.
-                window.setSize(monitor.width, monitor.height)
-                window.setLocation(monitor.x, monitor.y)
-                return
-            }
             val position = DisplayInfo.topCenterPosition(
                 width = window.width,
                 height = window.height,
@@ -499,47 +486,27 @@ private fun ApplicationScope.XTrayApplication() {
                     Log.i("island hidden by right click")
                 },
                 onGeometryChanged = { geometry ->
-                    val monitor = DisplayInfo.usableBounds(settings.current.monitorIndex)
-                    val windowWidth = if (geometry.captureOutside) monitor.width else geometry.windowWidthPx
-                    val windowHeight = if (geometry.captureOutside) monitor.height else geometry.windowHeightPx
-                    window.setSize(windowWidth, windowHeight)
-
-                    val originX: Int
-                    val originY: Int
-                    if (geometry.captureOutside) {
-                        originX = monitor.x
-                        originY = monitor.y
-                    } else {
-                        val position = DisplayInfo.topCenterPosition(
-                            width = windowWidth,
-                            height = windowHeight,
-                            topMargin = 0,
-                            monitorIndex = settings.current.monitorIndex,
-                        )
-                        originX = position.x
-                        originY = position.y
-                    }
-                    window.setLocation(originX, originY)
-
-                    // The island stays top-centre; when expanded the window is
-                    // the monitor, so the extra width becomes the backdrop.
+                    window.setSize(geometry.windowWidthPx, geometry.windowHeightPx)
+                    val position = DisplayInfo.topCenterPosition(
+                        width = geometry.windowWidthPx,
+                        height = geometry.windowHeightPx,
+                        topMargin = 0,
+                        monitorIndex = settings.current.monitorIndex,
+                    )
+                    window.setLocation(position.x, position.y)
                     islandBounds = Rectangle(
-                        originX + (windowWidth - geometry.islandWidthPx) / 2,
-                        originY,
+                        position.x + geometry.paddingPx,
+                        position.y,
                         geometry.islandWidthPx,
                         geometry.islandHeightPx,
                     )
                     Log.d(
-                        "geometry window=" + windowWidth + "x" + windowHeight +
+                        "geometry window=" + geometry.windowWidthPx + "x" + geometry.windowHeightPx +
                             " island=" + geometry.islandWidthPx + "x" + geometry.islandHeightPx +
-                            " at " + originX + "," + originY + " capture=" + geometry.captureOutside
+                            " at " + position.x + "," + position.y
                     )
                     SwingUtilities.invokeLater {
-                        val inputGeometry = geometry.copy(
-                            windowWidthPx = windowWidth,
-                            windowHeightPx = windowHeight,
-                        )
-                        if (!X11Window.applyInputRegion(inputGeometry)) {
+                        if (!X11Window.applyInputRegion(geometry)) {
                             Log.d("input region not applied")
                         }
                     }

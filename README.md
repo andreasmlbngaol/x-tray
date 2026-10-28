@@ -103,6 +103,11 @@ sender that posts often cannot flood the list. A horizontal swipe removes one
 message, swiping the group header removes every message from that sender, and
 **Clear all** empties the history. Clicking a message opens the app that sent it.
 
+Because X-Tray replaces the stock popups, it also plays the desktop notification
+chime itself, through libcanberra so it follows the sound theme you already use
+(with `paplay`/`pw-play` and a plain beep as fallbacks). **Do not disturb**
+silences it.
+
 If you would rather keep the stock popups, turn off **Replace system
 notifications** in Settings. When X-Tray exits, the desktop gets notifications
 back on its own.
@@ -123,7 +128,7 @@ arguments):
 
 ```bash
 ./scripts/install.sh --version v1.3.0
-curl -fsSL https://raw.githubusercontent.com/andreasmlbngaol/x-tray/master/scripts/install.sh | bash -s -- --version v1.3.0
+curl -fsSL https://raw.githubusercontent.com/andreasmlbngaol/x-tray/master/scripts/install.sh | bash -s -- --version v1.3.1
 ```
 
 The script needs `curl`, `dpkg` and `apt-get` (Debian, Ubuntu, Zorin) and only
@@ -135,7 +140,7 @@ Prefer to do it by hand? Download the latest `.deb` from
 [Releases](https://github.com/andreasmlbngaol/x-tray/releases), then:
 
 ```bash
-sudo apt install ./x-tray_1.3.0_amd64.deb
+sudo apt install ./x-tray_1.3.1_amd64.deb
 ```
 
 Start **X-Tray** from your app menu. The package bundles its own Java runtime,

@@ -213,13 +213,6 @@ object X11Window {
     }
 
     private fun buildRectangles(geometry: IslandGeometry): List<IntArray> {
-        // While the panel is modal the whole window must accept input, so the
-        // dismiss click lands on us instead of the application underneath.
-        if (geometry.captureOutside) {
-            if (geometry.windowWidthPx <= 0 || geometry.windowHeightPx <= 0) return emptyList()
-            return listOf(intArrayOf(0, 0, geometry.windowWidthPx, geometry.windowHeightPx))
-        }
-
         val islandWidth = geometry.islandWidthPx
         val islandHeight = geometry.islandHeightPx
         val radius = geometry.bottomRadiusPx
